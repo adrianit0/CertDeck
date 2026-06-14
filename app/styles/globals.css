@@ -1,0 +1,41 @@
+@import "./tokens.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--cd-font);
+  color: var(--cd-ink-900);
+  background: var(--cd-bg);
+  font-size: var(--cd-text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* Respeta el notch / áreas seguras en móvil (Capacitor) */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+/* Accesibilidad: foco siempre visible (RA-03) */
+:focus-visible {
+  outline: 3px solid var(--cd-blue-400);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--cd-blue-900);
+  line-height: 1.25;
+  margin: 0 0 var(--cd-space-3);
+}
+
+button {
+  font-family: inherit;
+}

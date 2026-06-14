@@ -3,8 +3,8 @@
 > **Documento maestro de gobernanza.** Establece las reglas no negociables del proyecto. Toda fase posterior (requisitos, hoja de ruta, tareas, implementación) y todo el código generado deben respetar este documento. En caso de conflicto entre cualquier artefacto y esta Constitución, **prevalece la Constitución**, salvo que el propietario apruebe explícitamente una excepción documentada en `docs/decisions/`.
 
 - **Estado:** Aprobada
-- **Versión:** 1.0.0
-- **Fecha:** 2026-06-14 · **Aprobada:** 2026-06-14
+- **Versión:** 1.1.0
+- **Fecha:** 2026-06-14 · **Aprobada:** 2026-06-14 · **Actualizada:** 2026-06-15
 - **Fase Spec Driven Development:** 1 — Constitución
 - **Aprobación requerida antes de continuar a Fase 2 (Requisitos):** Sí (concedida)
 
@@ -103,7 +103,7 @@ El agente IA **debe** cumplir obligatoriamente:
 
 ## 6. Reglas sobre Edge Functions
 
-1. Las Edge Functions **nuevas** se crean como archivos en `supabase/functions/<nombre-funcion>/index.ts`.
+1. Las Edge Functions **nuevas** se crean como archivos en `supabase/functions/certdeck-<nombre-funcion>/index.ts` (prefijo obligatorio `certdeck-`; ver §12.2). Las preexistentes de login/registro no se renombran ni se tocan.
 2. Se escriben en **TypeScript sobre Deno**.
 3. **Prohibido** tocar, mover o reconfigurar las funciones existentes de login/registro y su CORS.
 4. El agente **no despliega** ni ejecuta funciones; solo entrega el código.
@@ -122,7 +122,8 @@ El agente IA **debe** cumplir obligatoriamente:
 ## 7. Reglas sobre SQL
 
 1. Todo SQL vive en `supabase/sql/` con **numeración incremental**: `script-001.sql`, `script-002.sql`, …
-2. **Nunca** se sobrescribe un script anterior, salvo petición explícita del propietario.
+2. **Todas las tablas llevan el prefijo obligatorio `certdeck_`** (ver §12.2), para aislar el esquema de CertDeck de otras apps que comparten la base de datos Supabase.
+3. **Nunca** se sobrescribe un script anterior, salvo petición explícita del propietario.
 3. Cada nueva iteración con cambios de esquema crea un **archivo nuevo**.
 4. Cada script debe:
    - Empezar con un comentario de cabecera (qué hace, fecha, fase, dependencias de scripts previos).
@@ -243,9 +244,9 @@ El agente IA **debe** cumplir obligatoriamente:
 
 - **Documentos de specs:** `NN-nombre.md` (numeración con dos dígitos).
 - **Scripts SQL:** `script-NNN.sql` (tres dígitos, incremental, nunca reutilizado).
-- **Edge Functions:** carpeta `kebab-case` con `index.ts` dentro.
-- **Tablas SQL:** `snake_case`, plural para entidades (`courses`, `lessons`); tablas de usuario con prefijo `user_`.
-- **Columnas SQL:** `snake_case`; timestamps `created_at` / `updated_at`; claves foráneas `<entidad>_id`.
+- **Edge Functions (nuevas):** carpeta `certdeck-<kebab-case>` con `index.ts` dentro (p. ej. `certdeck-progress-complete-lesson`). **Excepción:** las Edge Functions **preexistentes y compartidas** de login/registro (`auth-login`, `auth-register`, `_shared/`) **NO se renombran** ni se tocan (Constitución §4).
+- **Tablas SQL:** **todas con prefijo obligatorio `certdeck_`**, en `snake_case` y plural para entidades (p. ej. `certdeck_courses`, `certdeck_lessons`). Las tablas de progreso de usuario usan `certdeck_user_<algo>` (p. ej. `certdeck_user_lesson_progress`). El prefijo aísla el esquema de CertDeck de otras apps que comparten la misma base de datos Supabase.
+- **Columnas SQL:** `snake_case`; timestamps `created_at` / `updated_at`; claves foráneas `<entidad>_id` (referida a la tabla `certdeck_<entidad>s`).
 - **Componentes React:** `PascalCase`.
 - **Hooks:** `useCamelCase`.
 - **Archivos de utilidades/lógica:** `camelCase.ts` o `kebab-case.ts` consistente por carpeta.
@@ -319,3 +320,4 @@ Esta Constitución se considera **aprobada** cuando el propietario confirma que:
 | Versión | Fecha | Cambios |
 |---|---|---|
 | 1.0.0 | 2026-06-14 | Versión inicial de la Constitución (Fase 1). **Aprobada** por el propietario el 2026-06-14. |
+| 1.1.0 | 2026-06-15 | Prefijo obligatorio `certdeck_` en todas las tablas y `certdeck-` en Edge Functions nuevas (§6, §7, §12.2). Motivo: base de datos Supabase compartida con otras apps. |

@@ -1,0 +1,36 @@
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--cd-space-4);
+  background: var(--cd-surface);
+  border: 1px solid var(--cd-line);
+  border-left: 6px solid var(--cd-celeste-300);
+  border-radius: var(--cd-radius);
+  padding: var(--cd-space-4);
+  box-shadow: var(--cd-shadow);
+}
+
+.interactive {
+  cursor: pointer;
+  transition: transform 0.05s ease, box-shadow 0.15s ease;
+}
+
+.interactive:active {
+  transform: scale(0.99);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--cd-celeste-100);
+  flex-shrink: 0;
+}
+
+.body {
+  min-width: 0;
+}

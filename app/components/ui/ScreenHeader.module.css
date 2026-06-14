@@ -1,0 +1,28 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--cd-space-3);
+}
+
+.back {
+  min-width: var(--cd-touch-min);
+  min-height: var(--cd-touch-min);
+  border: 1px solid var(--cd-line);
+  background: var(--cd-white);
+  border-radius: var(--cd-radius);
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--cd-blue-700);
+  cursor: pointer;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--cd-text-xl);
+}
+
+.subtitle {
+  margin: 2px 0 0;
+  color: var(--cd-ink-600);
+  font-size: var(--cd-text-sm);
+}

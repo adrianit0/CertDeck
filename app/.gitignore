@@ -1,0 +1,19 @@
+# Dependencias
+/node_modules
+
+# Builds de Next.js / export estático
+/.next
+/out
+
+# Capacitor (plataformas nativas generadas)
+/android
+/ios
+
+# Caches / logs
+*.tsbuildinfo
+npm-debug.log*
+*.log
+
+# Entorno (también cubierto por el .gitignore raíz)
+.env
+.env.local

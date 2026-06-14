@@ -2,9 +2,9 @@
 
 > Fase 2 del Spec Driven Development. Define **qué** debe hacer CertDeck (no el cómo). Se rige por la [Constitución](01-constitution.md); en caso de conflicto, prevalece la Constitución. Los requisitos se identifican con códigos estables (`RF-`, `RNF-`, `HU-`, `RN-`) para poder trazarlos desde la hoja de ruta y las tareas.
 
-- **Estado:** Borrador para aprobación (Fase 2)
-- **Versión:** 1.0.0
-- **Fecha:** 2026-06-14
+- **Estado:** Aprobada (actualizada con decisiones Q-01…Q-06)
+- **Versión:** 1.1.0
+- **Fecha:** 2026-06-14 · **Actualizada:** 2026-06-15
 - **Fase Spec Driven Development:** 2 — Requisitos
 - **Depende de:** Fase 1 (Constitución, aprobada)
 
@@ -196,8 +196,8 @@
 ### 6.2 Desbloqueo
 - **RN-04** Una lección está `available` si es la primera marcada como inicial o si su lección anterior requerida está `completed`.
 - **RN-05** Una lección de repaso requiere completar el conjunto de lecciones previas que cubre.
-- **RN-06** Debe existir un repaso cada 2–3 lecciones y al menos un repaso generalista por tema.
-- **RN-07** Una corrección de errores puede activarse automáticamente cuando el `score_percentage` de una lección queda por debajo de un umbral configurable (valor por defecto a fijar en Fase 3/4).
+- **RN-06** Debe existir un repaso **cada 3 lecciones** y **un repaso generalista al cierre de cada tema** (decidido en Q-04; cadencia configurable).
+- **RN-07** Una corrección de errores puede activarse automáticamente cuando el `score_percentage` de una lección queda **por debajo del 60%** (umbral configurable; decidido en Q-01).
 - **RN-08** El campo `unlock_rule` de la lección puede declarar condiciones explícitas de desbloqueo (extensible).
 
 ### 6.3 Ejercicios y evaluación
@@ -213,9 +213,9 @@ Cada tarjeta mantiene por usuario: `ease_factor`, `interval_days`, `repetitions`
 - **RN-13 (Incorrecto):**
   - La tarjeta se reencola al final de la lección actual.
   - `lapses += 1`.
-  - `ease_factor` disminuye ligeramente, sin bajar de un mínimo razonable (p. ej. 1.3).
-  - `interval_days` se reduce o reinicia.
-  - Si acumula varios fallos, se marca como **tarjeta problemática**.
+  - `ease_factor` disminuye en **0.2**, sin bajar de un mínimo de **1.3** (decidido en Q-03).
+  - `interval_days` se reinicia a 0.
+  - Si acumula **3 fallos** (en la misma lección o histórico), se marca como **tarjeta problemática** (decidido en Q-02).
 - **RN-14 (Correcto):**
   - `repetitions += 1`.
   - Intervalo con progresión moderada. Orientativo: 1.ª correcta → 1 día; 2.ª → 3 días; 3.ª → 7 días; siguientes → `interval_days_anterior × ease_factor`.
@@ -224,7 +224,7 @@ Cada tarjeta mantiene por usuario: `ease_factor`, `interval_days`, `repetitions`
   - `repetitions += 1`.
   - `ease_factor` aumenta ligeramente.
   - Intervalo crece más rápido. Orientativo: 1.ª → 3 días; 2.ª → 7 días; siguientes → `interval_days_anterior × factor_superior`.
-- **RN-16:** Los parámetros (mínimos, multiplicadores, umbrales, "varios fallos") deben ser **ajustables** sin reescribir la lógica (configuración documentada en Fase 3/4).
+- **RN-16:** Los parámetros deben ser **ajustables** sin reescribir la lógica. **Valores por defecto (Q-03):** `ease_factor` inicial 2.5, mínimo 1.3; Correcto: pasos iniciales 1/3/7 días y luego `interval × ease_factor`; Muy fácil: pasos 3/7 días, `ease_factor += 0.15` y factor de crecimiento superior; Incorrecto: `interval = 0` y `ease_factor -= 0.2`.
 - **RN-17:** Si el usuario falla repetidamente una tarjeta dentro de una lección, se da por válida para terminar la lección, pero el registro de error/condición problemática se conserva para repasos y correcciones.
 
 ### 6.5 Progreso
@@ -312,6 +312,8 @@ Tras completar una lección:
 
 ## 11. Gestión de progreso y de errores del usuario
 
+> **Nota de nomenclatura (Constitución §7/§12.2):** todas las tablas reales llevan el prefijo **`certdeck_`**. En este documento los nombres se citan sin prefijo por brevedad; en SQL son `certdeck_courses`, `certdeck_lessons`, `certdeck_user_lesson_progress`, etc.
+
 - **Progreso:** se persiste en `user_lesson_progress` (estado, score, conteos, `completed_at`), `user_question_attempts` (cada intento) y `user_spaced_repetition` (estado por tarjeta).
 - **Errores del usuario:** cada fallo queda registrado como intento (`was_correct = false`) y, en tarjetas, afecta a `lapses`/condición problemática; esto alimenta lecciones de corrección y la selección de repasos.
 - **Antifrustración:** fallar repetidamente una tarjeta dentro de una lección no impide terminarla, pero el sistema recuerda el fallo para reforzarlo más adelante (RN-17).
@@ -368,13 +370,13 @@ Tras completar una lección:
 - La sesión de usuario autenticado está disponible vía las Edge Functions de login/registro existentes.
 - El propietario cargará contenido de ejemplo (seed) para poder validar los flujos.
 
-**Cuestiones abiertas (a resolver en Fase 3/4):**
-- **Q-01** Umbral exacto de "bajo rendimiento" que activa corrección de errores (RN-07).
-- **Q-02** Definición de "varios fallos" para marcar tarjeta problemática (RN-13/RN-17).
-- **Q-03** Valores por defecto definitivos del algoritmo espaciado (mínimo `ease_factor`, multiplicadores, factor "Muy fácil") (RN-16).
-- **Q-04** Cadencia exacta de repasos (¿cada 2 o cada 3?) y composición del repaso generalista.
-- **Q-05** ¿La lógica de desbloqueo/repaso se calcula en cliente, en Edge Function o en SQL? (decisión de arquitectura, Fase 3 + ADR).
-- **Q-06** ¿La práctica directa de examen afecta al estado de repetición espaciada o es independiente?
+**Cuestiones resueltas (aprobadas el 2026-06-15 en Fase 3):**
+- **Q-01 ✅** Corrección de errores se activa con `score_percentage < 60%` (ver RN-07).
+- **Q-02 ✅** Tarjeta problemática a partir de **3 fallos** (ver RN-13/RN-17).
+- **Q-03 ✅** Parámetros por defecto del algoritmo espaciado fijados (ver RN-16).
+- **Q-04 ✅** Repaso **cada 3 lecciones** + generalista al cierre de cada tema (ver RN-06).
+- **Q-05 ✅** Lógica de desbloqueo/repaso **híbrida**: cálculo optimista en cliente + validación/persistencia autoritativa en Edge Functions + RLS (ver [ADR 0002](decisions/0002-logica-desbloqueo-y-repaso.md)).
+- **Q-06 ✅** La práctica directa de examen **no** altera `user_spaced_repetition` en el MVP (registra intentos); revisable en v3.
 
 ---
 
@@ -396,3 +398,4 @@ Esta fase se considera **aprobada** cuando el propietario confirma que:
 | Versión | Fecha | Cambios |
 |---|---|---|
 | 1.0.0 | 2026-06-14 | Versión inicial de Requisitos (Fase 2). Pendiente de aprobación. |
+| 1.1.0 | 2026-06-15 | Integradas las decisiones Q-01…Q-06 (RN-06, RN-07, RN-13, RN-16, §16). Estado: aprobada. |
