@@ -86,6 +86,42 @@ Roadmap **v0**; tareas T-v0-001 … T-v0-011 (T-v0-010 SQL incluida; ver §6).
 
 ---
 
+## Iteración v1 (parcial) — Catálogo de preguntas + primer contenido (2026-06-15)
+
+### 1. Resumen
+Se habilita la **creación de lecciones con preguntas**: tablas del catálogo de preguntas y el primer contenido real del curso AWS SAA-C03 (etapa *Básico* → tema *Introduction to S3*, basado en la diapositiva 18 del Manual), con 3 lecciones normales + 1 de repaso + 1 final.
+
+### 2. Decisión de numeración SQL
+- `script-002.sql` = **catálogo de preguntas** (`certdeck_flashcard_questions`, `certdeck_exam_questions`).
+- Las tablas de **progreso de usuario** (`certdeck_user_*`) se trasladan a **`script-003.sql`** (siguiente). (El antiguo "seed script-003" del roadmap queda obsoleto: el contenido vive ahora en `sql_contenido/`.)
+
+### 3. Archivos creados
+- `supabase/sql/script-002.sql` — `certdeck_flashcard_questions` (con `exercise_type` ∈ {anki_card, multiple_choice, true_false}, `position`, constraints por tipo) y `certdeck_exam_questions` (type_id 1/2, answer_1..6, correct_answers_count); índices, trigger y **RLS de lectura** de preguntas activas en contenido publicado.
+- `supabase/sql_contenido/20260515_02_aws-saa-c03.sql` — fragmento 02: etapa *Básico*, tema *Introduction to S3*, 5 lecciones con pantallas de contenido y preguntas variadas (ANKI / test / V-F). Idempotente (`on conflict` por `position`).
+
+### 4. Decisiones de diseño
+- **`exercise_type` en `certdeck_flashcard_questions`:** necesario para que una misma tabla sirva a tarjeta ANKI, test de 3 respuestas y verdadero/falso (no estaba explícito en el modelo del prompt).
+- **Jerarquía interpretada:** etapa *Básico* cubrirá S3 / AWS API / VPC; el primer **tema** es *Introduction to S3*. S3/AWS API/VPC serán temas futuros de la etapa.
+- **Repaso (L4) y final (L5)** se autoría con preguntas explícitas; cuando exista `certdeck-review-build-lesson` (v2) el repaso podrá componerse dinámicamente.
+- **RNF-14:** las políticas de lectura exponen la respuesta correcta al cliente (simplicidad MVP); la validación autoritativa irá en Edge Functions.
+
+### 5. Verificación
+- Sin Postgres local disponible (`psql`/`docker` ausentes): **no se ha podido ejecutar** el SQL. Revisión manual de sintaxis realizada (claves de conflicto, constraints por tipo, escape de saltos de línea con `E'...'`). **Requiere validación del propietario al aplicarlo.**
+
+### 6. Instrucciones manuales para el propietario (orden de aplicación)
+1. `supabase/sql/script-001.sql` (si aún no está aplicado).
+2. `supabase/sql/script-002.sql` (catálogo de preguntas).
+3. `supabase/sql_contenido/20260515_01_aws-saa-c03.sql` (curso).
+4. `supabase/sql_contenido/20260515_02_aws-saa-c03.sql` (etapa + tema + lecciones).
+> Todos son idempotentes y re-ejecutables. El agente no los ejecuta (Constitución §4).
+
+### 7. Pendiente
+- [ ] `script-003.sql` con tablas de progreso de usuario (`certdeck_user_*`) + RLS.
+- [ ] Pantallas de la app para navegar y estudiar este contenido (v1 frontend).
+- [ ] Validación del propietario aplicando los SQL.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
