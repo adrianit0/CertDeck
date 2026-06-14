@@ -1,0 +1,118 @@
+.prompt {
+  font-size: var(--cd-text-lg);
+  font-weight: 600;
+  color: var(--cd-blue-900);
+  margin: 0 0 var(--cd-space-2);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cd-space-3);
+}
+
+.option {
+  width: 100%;
+  text-align: left;
+  min-height: var(--cd-touch-min);
+  padding: var(--cd-space-3) var(--cd-space-4);
+  border: 2px solid var(--cd-line);
+  border-radius: var(--cd-radius);
+  background: var(--cd-white);
+  font-size: var(--cd-text-base);
+  cursor: pointer;
+}
+
+.option:disabled {
+  cursor: default;
+}
+
+.optionCorrect {
+  border-color: var(--cd-success);
+  background: var(--cd-success-bg);
+}
+
+.optionWrong {
+  border-color: var(--cd-error);
+  background: var(--cd-error-bg);
+}
+
+.feedback {
+  margin-top: var(--cd-space-4);
+  padding: var(--cd-space-4);
+  border-radius: var(--cd-radius);
+  background: var(--cd-celeste-100);
+}
+
+.feedbackOk {
+  color: var(--cd-success);
+  font-weight: 700;
+  margin: 0 0 var(--cd-space-2);
+}
+
+.feedbackKo {
+  color: var(--cd-error);
+  font-weight: 700;
+  margin: 0 0 var(--cd-space-2);
+}
+
+.explanation {
+  margin: var(--cd-space-2) 0 0;
+  color: var(--cd-ink-600);
+}
+
+/* Tarjeta ANKI */
+.card {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--cd-space-3);
+  padding: var(--cd-space-6);
+  border: 1px solid var(--cd-line);
+  border-radius: var(--cd-radius-lg);
+  background: var(--cd-white);
+  box-shadow: var(--cd-shadow);
+  text-align: center;
+}
+
+.cardLabel {
+  font-size: var(--cd-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cd-ink-600);
+  margin: 0;
+}
+
+.cardText {
+  font-size: var(--cd-text-lg);
+  color: var(--cd-ink-900);
+  margin: 0;
+}
+
+.ankiButtons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--cd-space-2);
+  margin-top: var(--cd-space-4);
+}
+
+.progressBar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cd-celeste-200);
+  overflow: hidden;
+  margin-bottom: var(--cd-space-2);
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--cd-primary);
+  transition: width 0.2s ease;
+}
+
+.screenBody {
+  font-size: var(--cd-text-base);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}

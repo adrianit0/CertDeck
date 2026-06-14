@@ -122,6 +122,42 @@ Se habilita la **creación de lecciones con preguntas**: tablas del catálogo de
 
 ---
 
+## Iteración v1 — Frontend de estudio + progreso + Edge Function (2026-06-15)
+
+### 1. Resumen
+Recorrido de aprendizaje funcional de extremo a extremo: catálogo → curso → tema (resumen + lecciones con **desbloqueo lineal**) → **reproductor de lección** (pantallas de contenido + ejercicios ANKI/test/V-F con respuestas barajadas y reencolado de "Incorrecto") → **resultado** (% aciertos/fallos) → progreso. Se entregan además `script-003.sql` (progreso) y la Edge Function autoritativa.
+
+### 2. Archivos creados — Frontend
+- **Datos/lógica:** `lib/types.ts`, `lib/shuffle.ts` (+test), `lib/queries/content.ts`, `lib/queries/progress.ts`, `lib/progress/localProgress.ts`, `features/lesson/engine/options.ts` (+test), `hooks/useAsync.ts`.
+- **Lección:** `features/lesson/LessonPlayer.tsx`, `LessonScreen.tsx`, `exercises/AnkiCard.tsx`, `exercises/ChoiceQuestion.tsx`, `lesson.module.css`.
+- **Contenido:** `features/content/CatalogScreen.tsx`, `CourseScreen.tsx`, `TopicScreen.tsx`; `features/progress/ProgressScreen.tsx`.
+- **Rutas:** `src/app/courses`, `course`, `topic`, `lesson`, `progress` (+ home actualizada). Las que leen query params van envueltas en `Suspense` (export estático).
+
+### 3. Archivos creados — Backend / SQL
+- `supabase/sql/script-003.sql` — `certdeck_user_lesson_progress`, `certdeck_user_question_attempts` + **RLS por usuario** (`auth.uid() = user_id`).
+- `supabase/functions/certdeck-progress-complete-lesson/` (`index.ts` + `README.md`) — Edge Function NUEVA, autoritativa, con CORS propio (no toca login/registro). **No desplegada** por el agente.
+
+### 4. Decisiones de diseño
+- **Navegación por query params** (`/course?slug=`, `/topic?id=`, `/lesson?id=`) en vez de rutas dinámicas: compatible con `output: 'export'` (ADR 0003) sin `generateStaticParams`.
+- **Progreso optimista local** (`localProgress`, ADR 0002): el desbloqueo lineal y el progreso funcionan ya en cliente (localStorage); la Edge Function + RLS son la fuente de verdad y reconcilian. La llamada a la función es best-effort (si no está desplegada, no rompe la UX).
+- **Recuento de score:** cada pregunta cuenta una sola vez (primera resolución); el reencolado de tarjetas falladas no duplica el recuento (antifrustración, RN-17).
+
+### 5. Verificación (local)
+| Check | Comando | Resultado |
+|---|---|---|
+| Tipos | `npm run typecheck` | ✅ |
+| Tests | `npm run test` | ✅ 10/10 |
+| Lint | `npm run lint` | ✅ |
+| Build export | `npm run build` | ✅ 7 rutas exportadas |
+> El SQL/Edge Function no se han podido ejecutar (sin Postgres/Supabase local). Requieren validación del propietario.
+
+### 6. Pendiente de v1
+- [ ] Ejercicios y práctica directa de **examen** (`certdeck_exam_questions` ya existe; faltan UI y datos).
+- [ ] Que el propietario aplique `script-002/003.sql` y despliegue `certdeck-progress-complete-lesson`.
+- [ ] Reemplazar progreso local por lectura real desde `certdeck_user_lesson_progress`.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
