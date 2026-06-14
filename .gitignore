@@ -1,0 +1,9 @@
+.idea
+.claude
+.localResources
+*.iml
+app/.env
+app/.next
+
+# Supabase CLI temp files
+supabase/.temp/
