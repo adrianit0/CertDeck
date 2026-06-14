@@ -3,7 +3,7 @@
 > **Documento maestro de gobernanza.** Establece las reglas no negociables del proyecto. Toda fase posterior (requisitos, hoja de ruta, tareas, implementación) y todo el código generado deben respetar este documento. En caso de conflicto entre cualquier artefacto y esta Constitución, **prevalece la Constitución**, salvo que el propietario apruebe explícitamente una excepción documentada en `docs/decisions/`.
 
 - **Estado:** Aprobada
-- **Versión:** 1.1.0
+- **Versión:** 1.3.0
 - **Fecha:** 2026-06-14 · **Aprobada:** 2026-06-14 · **Actualizada:** 2026-06-15
 - **Fase Spec Driven Development:** 1 — Constitución
 - **Aprobación requerida antes de continuar a Fase 2 (Requisitos):** Sí (concedida)
@@ -121,9 +121,11 @@ El agente IA **debe** cumplir obligatoriamente:
 
 ## 7. Reglas sobre SQL
 
-1. Todo SQL vive en `supabase/sql/` con **numeración incremental**: `script-001.sql`, `script-002.sql`, …
+1. **Separación de SQL en dos carpetas** (no mezclar contenido y estructura):
+   - `supabase/sql/` → **SQL estructural** de la aplicación (creación de tablas, columnas, constraints, índices, RLS, triggers, funciones). Numeración incremental `script-NNN.sql`.
+   - `supabase/sql_contenido/` → **SQL de contenido** de los cursos (sentencias `INSERT`/`UPDATE` de cursos, etapas, temas, lecciones, pantallas y preguntas). El contenido de un curso se divide en **fragmentos** (un curso es demasiado grande para un solo archivo). Nomenclatura: **`YYYYMMDD_NN_<slug>.sql`** (fecha invertida + contador de 2 dígitos + `slug`), de forma que el **orden alfabético coincide con el orden de ejecución** en serie. No altera el esquema.
 2. **Todas las tablas llevan el prefijo obligatorio `certdeck_`** (ver §12.2), para aislar el esquema de CertDeck de otras apps que comparten la base de datos Supabase.
-3. **Nunca** se sobrescribe un script anterior, salvo petición explícita del propietario.
+3. **Nunca** se sobrescribe un script estructural anterior, salvo petición explícita del propietario. Los archivos de contenido sí pueden actualizarse (son datos del curso) y deben ser **idempotentes** (`on conflict … do update/nothing`).
 3. Cada nueva iteración con cambios de esquema crea un **archivo nuevo**.
 4. Cada script debe:
    - Empezar con un comentario de cabecera (qué hace, fecha, fase, dependencias de scripts previos).
@@ -230,9 +232,13 @@ El agente IA **debe** cumplir obligatoriamente:
 │   ├── functions/            # SOLO Edge Functions NUEVAS (nunca login/registro)
 │   │   └── <function-name>/
 │   │       └── index.ts
-│   └── sql/                  # Scripts SQL versionados incrementalmente
-│       ├── script-001.sql
-│       ├── script-002.sql
+│   ├── sql/                  # SQL ESTRUCTURAL de la app (esquema, RLS, índices…)
+│   │   ├── script-001.sql    # versionado incremental: script-NNN.sql
+│   │   ├── script-002.sql
+│   │   └── ...
+│   └── sql_contenido/        # SQL de CONTENIDO de cursos (INSERTs de datos)
+│       ├── 20260515_01_aws-saa-c03.sql   # fragmentos: YYYYMMDD_NN_<slug>.sql
+│       ├── 20260515_02_aws-saa-c03.sql   # (orden alfabético = orden de ejecución)
 │       └── ...
 │
 └── README.md
@@ -243,7 +249,8 @@ El agente IA **debe** cumplir obligatoriamente:
 ### 12.2 Convenciones de nombres
 
 - **Documentos de specs:** `NN-nombre.md` (numeración con dos dígitos).
-- **Scripts SQL:** `script-NNN.sql` (tres dígitos, incremental, nunca reutilizado).
+- **Scripts SQL estructurales** (`supabase/sql/`): `script-NNN.sql` (tres dígitos, incremental, nunca reutilizado).
+- **Archivos SQL de contenido** (`supabase/sql_contenido/`): fragmentos nombrados **`YYYYMMDD_NN_<slug>.sql`** (fecha invertida `AAAAMMDD` + contador `NN` de 2 dígitos + `slug` en `kebab-case`; p. ej. `20260515_01_aws-saa-c03.sql`). El orden alfabético = orden de ejecución. Solo datos (`INSERT`/`UPDATE`), idempotentes, nunca cambios de esquema.
 - **Edge Functions (nuevas):** carpeta `certdeck-<kebab-case>` con `index.ts` dentro (p. ej. `certdeck-progress-complete-lesson`). **Excepción:** las Edge Functions **preexistentes y compartidas** de login/registro (`auth-login`, `auth-register`, `_shared/`) **NO se renombran** ni se tocan (Constitución §4).
 - **Tablas SQL:** **todas con prefijo obligatorio `certdeck_`**, en `snake_case` y plural para entidades (p. ej. `certdeck_courses`, `certdeck_lessons`). Las tablas de progreso de usuario usan `certdeck_user_<algo>` (p. ej. `certdeck_user_lesson_progress`). El prefijo aísla el esquema de CertDeck de otras apps que comparten la misma base de datos Supabase.
 - **Columnas SQL:** `snake_case`; timestamps `created_at` / `updated_at`; claves foráneas `<entidad>_id` (referida a la tabla `certdeck_<entidad>s`).
@@ -321,3 +328,5 @@ Esta Constitución se considera **aprobada** cuando el propietario confirma que:
 |---|---|---|
 | 1.0.0 | 2026-06-14 | Versión inicial de la Constitución (Fase 1). **Aprobada** por el propietario el 2026-06-14. |
 | 1.1.0 | 2026-06-15 | Prefijo obligatorio `certdeck_` en todas las tablas y `certdeck-` en Edge Functions nuevas (§6, §7, §12.2). Motivo: base de datos Supabase compartida con otras apps. |
+| 1.2.0 | 2026-06-15 | Separación de SQL en `supabase/sql/` (estructural) y `supabase/sql_contenido/` (contenido de cursos) (§7, §12.1, §12.2). |
+| 1.3.0 | 2026-06-15 | Nomenclatura de fragmentos de contenido `YYYYMMDD_NN_<slug>.sql` (orden alfabético = orden de ejecución); el contenido de un curso se divide en fragmentos (§7, §12.1, §12.2). |

@@ -39,6 +39,11 @@ Roadmap **v0**; tareas T-v0-001 … T-v0-011 (T-v0-010 SQL incluida; ver §6).
 ### 6. Scripts SQL generados
 - `supabase/sql/script-001.sql` — esquema de **contenido** (`certdeck_courses`, `certdeck_stages`, `certdeck_topics`, `certdeck_lessons`, `certdeck_lesson_screens`): PK/FK, constraints (CHECK de `lesson_type`, `difficulty`, unicidad por `position`), índices, trigger `certdeck_set_updated_at` y **RLS de solo lectura del contenido publicado** para usuarios autenticados. Todas las tablas con prefijo `certdeck_` (Constitución §7/§12.2). **No ejecutado** por el agente.
 
+**Separación de SQL (Constitución §7/§12, v1.2.0+):** el SQL estructural vive en `supabase/sql/` y el contenido de cursos en `supabase/sql_contenido/`, fragmentado con la nomenclatura `YYYYMMDD_NN_<slug>.sql` (orden alfabético = orden de ejecución, v1.3.0).
+
+**Contenido generado:**
+- `supabase/sql_contenido/20260515_01_aws-saa-c03.sql` — fragmento 01: inserta el primer curso *Amazon Solutions Architect - Associate (AWS SAA - C03)* (`slug = aws-saa-c03`, `is_published = true`), idempotente (`on conflict (slug)`). Etapas/temas/lecciones en fragmentos posteriores cuando empecemos a crear lecciones. Depende de `script-001.sql` aplicado.
+
 ### 7. Edge Functions generadas
 - Ninguna en v0. (Las Edge Functions de login/registro presentes en `supabase/functions/` son **preexistentes y compartidas**; no se han creado ni modificado — Constitución §4.)
 
