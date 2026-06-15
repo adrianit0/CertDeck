@@ -116,3 +116,48 @@
   line-height: 1.6;
   white-space: pre-wrap;
 }
+
+/* Respuesta escrita (text_input) */
+.answerPattern {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--cd-space-2);
+  margin: var(--cd-space-3) 0 var(--cd-space-4);
+}
+
+.slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4em;
+  border-bottom: 3px solid var(--cd-primary);
+  font-size: var(--cd-text-xl);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--cd-blue-900);
+  line-height: 1.2;
+}
+
+.slotSpace {
+  width: var(--cd-space-4);
+}
+
+.textInput {
+  width: 100%;
+  min-height: var(--cd-touch-min);
+  padding: var(--cd-space-3) var(--cd-space-4);
+  border: 2px solid var(--cd-line);
+  border-radius: var(--cd-radius);
+  background: var(--cd-white);
+  font-size: var(--cd-text-lg);
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: var(--cd-primary);
+}
+
+.textInput:disabled {
+  background: var(--cd-celeste-100);
+}

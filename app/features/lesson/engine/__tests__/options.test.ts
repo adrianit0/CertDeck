@@ -7,13 +7,11 @@ function makeQuestion(overrides: Partial<FlashcardQuestion>): FlashcardQuestion 
     id: "q1",
     lesson_id: "l1",
     exercise_type: "multiple_choice",
-    position: 1,
     question: "¿Pregunta?",
     correct_answer: "Correcta",
     incorrect_answer_1: "Mal 1",
     incorrect_answer_2: "Mal 2",
     explanation: null,
-    difficulty: 1,
     ...overrides,
   };
 }

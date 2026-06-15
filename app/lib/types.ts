@@ -5,7 +5,7 @@
 
 export type LessonType = "normal" | "review" | "error_correction" | "expansion" | "final";
 
-export type ExerciseType = "anki_card" | "multiple_choice" | "true_false";
+export type ExerciseType = "anki_card" | "multiple_choice" | "true_false" | "text_input";
 
 export type LessonStatus = "locked" | "available" | "in_progress" | "completed";
 
@@ -43,7 +43,6 @@ export interface Lesson {
   description: string | null;
   lesson_type: LessonType;
   position: number;
-  estimated_minutes: number | null;
 }
 
 export interface LessonScreen {
@@ -58,13 +57,11 @@ export interface FlashcardQuestion {
   id: string;
   lesson_id: string;
   exercise_type: ExerciseType;
-  position: number;
   question: string;
   correct_answer: string;
   incorrect_answer_1: string | null;
   incorrect_answer_2: string | null;
   explanation: string | null;
-  difficulty: number;
 }
 
 /** Una etapa con sus temas (para la pantalla de detalle de curso). */

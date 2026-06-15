@@ -84,7 +84,7 @@ export async function getTopic(topicId: string): Promise<Topic | null> {
 export async function getLessonsByTopic(topicId: string): Promise<Lesson[]> {
   const { data, error } = await getSupabaseClient()
     .from("certdeck_lessons")
-    .select("id, topic_id, title, description, lesson_type, position, estimated_minutes")
+    .select("id, topic_id, title, description, lesson_type, position")
     .eq("topic_id", topicId)
     .order("position", { ascending: true });
   if (error) throw error;
@@ -96,7 +96,7 @@ export async function getPlayableLesson(lessonId: string): Promise<PlayableLesso
 
   const { data: lesson, error: lessonError } = await supabase
     .from("certdeck_lessons")
-    .select("id, topic_id, title, description, lesson_type, position, estimated_minutes")
+    .select("id, topic_id, title, description, lesson_type, position")
     .eq("id", lessonId)
     .maybeSingle();
   if (lessonError) throw lessonError;
@@ -109,13 +109,14 @@ export async function getPlayableLesson(lessonId: string): Promise<PlayableLesso
     .order("position", { ascending: true });
   if (screensError) throw screensError;
 
+  // Se extraen TODAS las preguntas activas de la lección; el orden de
+  // presentación lo decide el reproductor (aleatorio), no la base de datos.
   const { data: questions, error: questionsError } = await supabase
     .from("certdeck_flashcard_questions")
     .select(
-      "id, lesson_id, exercise_type, position, question, correct_answer, incorrect_answer_1, incorrect_answer_2, explanation, difficulty",
+      "id, lesson_id, exercise_type, question, correct_answer, incorrect_answer_1, incorrect_answer_2, explanation",
     )
-    .eq("lesson_id", lessonId)
-    .order("position", { ascending: true });
+    .eq("lesson_id", lessonId);
   if (questionsError) throw questionsError;
 
   return {

@@ -14,7 +14,9 @@
 --
 -- Dependencias: script-001.sql (esquema contenido) + script-002.sql (preguntas)
 --               + 20260515_01_aws-saa-c03.sql (curso) aplicados.
--- Idempotente: usa ON CONFLICT sobre las claves naturales (position).
+-- Idempotente: usa ON CONFLICT sobre claves naturales (position para
+-- etapas/temas/lecciones/pantallas; (lesson_id, question) para las preguntas).
+-- Requiere script-004.sql aplicado (flashcards sin position/difficulty).
 -- NO ejecutado por el agente (Constitución §4). El propietario lo aplica.
 -- =============================================================================
 
@@ -66,26 +68,25 @@ with t as (
   where c.slug = 'aws-saa-c03' and s.position = 1 and tp.position = 1
 )
 insert into public.certdeck_lessons
-  (topic_id, title, description, lesson_type, position, estimated_minutes, is_published)
-select t.id, v.title, v.description, v.lesson_type, v.position, v.estimated_minutes, true
+  (topic_id, title, description, lesson_type, position, is_published)
+select t.id, v.title, v.description, v.lesson_type, v.position, true
 from t,
 (values
   (1, '¿Qué es el almacenamiento de objetos?',
-      'Concepto de object storage y qué ofrece Amazon S3.', 'normal', 4),
+      'Concepto de object storage y qué ofrece Amazon S3.', 'normal'),
   (2, 'Anatomía de un objeto en S3',
-      'Qué es un objeto y sus componentes: Key, Value, Version ID y Metadata.', 'normal', 4),
+      'Qué es un objeto y sus componentes: Key, Value, Version ID y Metadata.', 'normal'),
   (3, 'Buckets y espacio de nombres',
-      'Buckets, carpetas, namespace universal y tamaño de los objetos.', 'normal', 4),
+      'Buckets, carpetas, namespace universal y tamaño de los objetos.', 'normal'),
   (4, 'Repaso: fundamentos de S3',
-      'Repaso de las lecciones anteriores del tema.', 'review', 3),
+      'Repaso de las lecciones anteriores del tema.', 'review'),
   (5, 'Lección final: Introducción a S3',
-      'Repaso amplio para cerrar el tema y avanzar al siguiente.', 'final', 5)
-) as v(position, title, description, lesson_type, estimated_minutes)
+      'Repaso amplio para cerrar el tema y avanzar al siguiente.', 'final')
+) as v(position, title, description, lesson_type)
 on conflict (topic_id, position) do update set
   title = excluded.title,
   description = excluded.description,
   lesson_type = excluded.lesson_type,
-  estimated_minutes = excluded.estimated_minutes,
   is_published = excluded.is_published,
   updated_at = now();
 
@@ -122,35 +123,35 @@ with l as (
   where c.slug = 'aws-saa-c03' and s.position = 1 and tp.position = 1 and l.position = 1
 )
 insert into public.certdeck_flashcard_questions
-  (lesson_id, exercise_type, position, question, correct_answer,
-   incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-select l.id, v.exercise_type, v.position, v.question, v.correct_answer,
-       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation, v.difficulty
+  (lesson_id, exercise_type, question, correct_answer,
+   incorrect_answer_1, incorrect_answer_2, explanation)
+select l.id, v.exercise_type, v.question, v.correct_answer,
+       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation
 from l,
 (values
-  ('anki_card', 1,
+  ('anki_card',
    '¿Cómo gestiona los datos el almacenamiento de objetos?',
    'Como objetos, en lugar de como bloques o ficheros jerárquicos.',
    null, null,
-   'El object storage trata cada dato como un objeto independiente.', 1),
-  ('multiple_choice', 2,
+   'El object storage trata cada dato como un objeto independiente.'),
+  ('multiple_choice',
    '¿Cuánta capacidad de almacenamiento te ofrece Amazon S3?',
    'Prácticamente ilimitada',
    'Hasta 5 GB', 'Hasta 1 TB',
-   'S3 ofrece almacenamiento ilimitado; no gestionas la infraestructura.', 1),
-  ('true_false', 3,
+   'S3 ofrece almacenamiento ilimitado; no gestionas la infraestructura.'),
+  ('true_false',
    'En S3 debes aprovisionar y gestionar tú la infraestructura de almacenamiento subyacente.',
    'Falso',
    null, null,
-   'S3 es un servicio gestionado: no te preocupas por la infraestructura.', 1)
-) as v(exercise_type, position, question, correct_answer,
-       incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-on conflict (lesson_id, position) do update set
-  exercise_type = excluded.exercise_type, question = excluded.question,
+   'S3 es un servicio gestionado: no te preocupas por la infraestructura.')
+) as v(exercise_type, question, correct_answer,
+       incorrect_answer_1, incorrect_answer_2, explanation)
+on conflict (lesson_id, question) do update set
+  exercise_type = excluded.exercise_type,
   correct_answer = excluded.correct_answer,
   incorrect_answer_1 = excluded.incorrect_answer_1,
   incorrect_answer_2 = excluded.incorrect_answer_2,
-  explanation = excluded.explanation, difficulty = excluded.difficulty,
+  explanation = excluded.explanation,
   updated_at = now();
 
 -- ===========================================================================
@@ -183,37 +184,38 @@ with l as (
   where c.slug = 'aws-saa-c03' and s.position = 1 and tp.position = 1 and l.position = 2
 )
 insert into public.certdeck_flashcard_questions
-  (lesson_id, exercise_type, position, question, correct_answer,
-   incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-select l.id, v.exercise_type, v.position, v.question, v.correct_answer,
-       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation, v.difficulty
+  (lesson_id, exercise_type, question, correct_answer,
+   incorrect_answer_1, incorrect_answer_2, explanation)
+select l.id, v.exercise_type, v.question, v.correct_answer,
+       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation
 from l,
 (values
-  ('multiple_choice', 1,
+  ('multiple_choice',
    '¿Qué componente de un objeto S3 representa su nombre?',
    'Key', 'Value', 'Metadata',
-   'La Key es el nombre que identifica al objeto dentro del bucket.', 1),
-  ('anki_card', 2,
+   'La Key es el nombre que identifica al objeto dentro del bucket.'),
+  ('anki_card',
    '¿Qué es el "Value" de un objeto S3?',
    'Los datos en sí, formados por una secuencia de bytes.',
    null, null,
-   'El Value es el contenido del objeto.', 1),
-  ('true_false', 3,
+   'El Value es el contenido del objeto.'),
+  ('true_false',
    'El "Version ID" de un objeto solo es relevante cuando el versionado está habilitado.',
    'Verdadero', null, null,
-   'Sin versionado no se asignan versiones a los objetos.', 1),
-  ('multiple_choice', 4,
+   'Sin versionado no se asignan versiones a los objetos.'),
+  -- Respuesta escrita (text_input): respuesta de una sola palabra.
+  ('text_input',
    '¿Qué campo guarda información adicional adjunta al objeto?',
-   'Metadata', 'Key', 'Version ID',
-   'Los metadatos son información extra asociada al objeto.', 1)
-) as v(exercise_type, position, question, correct_answer,
-       incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-on conflict (lesson_id, position) do update set
-  exercise_type = excluded.exercise_type, question = excluded.question,
+   'Metadata', null, null,
+   'Los metadatos son información extra asociada al objeto.')
+) as v(exercise_type, question, correct_answer,
+       incorrect_answer_1, incorrect_answer_2, explanation)
+on conflict (lesson_id, question) do update set
+  exercise_type = excluded.exercise_type,
   correct_answer = excluded.correct_answer,
   incorrect_answer_1 = excluded.incorrect_answer_1,
   incorrect_answer_2 = excluded.incorrect_answer_2,
-  explanation = excluded.explanation, difficulty = excluded.difficulty,
+  explanation = excluded.explanation,
   updated_at = now();
 
 -- ===========================================================================
@@ -246,39 +248,39 @@ with l as (
   where c.slug = 'aws-saa-c03' and s.position = 1 and tp.position = 1 and l.position = 3
 )
 insert into public.certdeck_flashcard_questions
-  (lesson_id, exercise_type, position, question, correct_answer,
-   incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-select l.id, v.exercise_type, v.position, v.question, v.correct_answer,
-       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation, v.difficulty
+  (lesson_id, exercise_type, question, correct_answer,
+   incorrect_answer_1, incorrect_answer_2, explanation)
+select l.id, v.exercise_type, v.question, v.correct_answer,
+       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation
 from l,
 (values
-  ('anki_card', 1,
+  ('anki_card',
    '¿Qué contienen los buckets de S3?',
    'Objetos (y, opcionalmente, carpetas que contienen objetos).',
    null, null,
-   'El bucket es el contenedor de nivel superior en S3.', 1),
-  ('true_false', 2,
+   'El bucket es el contenedor de nivel superior en S3.'),
+  ('true_false',
    'Dos cuentas distintas pueden tener buckets con el mismo nombre.',
    'Falso', null, null,
-   'El namespace de S3 es universal: los nombres de bucket son únicos globalmente.', 2),
-  ('multiple_choice', 3,
+   'El namespace de S3 es universal: los nombres de bucket son únicos globalmente.'),
+  ('multiple_choice',
    '¿Cuál es el tamaño máximo de un único objeto en S3?',
    '5 TB', '5 GB', '500 GB',
-   'Un objeto individual puede ir de 0 bytes hasta 5 TB.', 2),
-  ('multiple_choice', 4,
+   'Un objeto individual puede ir de 0 bytes hasta 5 TB.'),
+  ('multiple_choice',
    '¿Por qué los nombres de bucket deben ser únicos globalmente?',
    'Porque S3 usa un espacio de nombres universal',
    'Porque cada región exige nombres distintos',
    'Porque el nombre se usa como clave de cifrado',
-   'El namespace universal obliga a nombres únicos en todo S3.', 2)
-) as v(exercise_type, position, question, correct_answer,
-       incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-on conflict (lesson_id, position) do update set
-  exercise_type = excluded.exercise_type, question = excluded.question,
+   'El namespace universal obliga a nombres únicos en todo S3.')
+) as v(exercise_type, question, correct_answer,
+       incorrect_answer_1, incorrect_answer_2, explanation)
+on conflict (lesson_id, question) do update set
+  exercise_type = excluded.exercise_type,
   correct_answer = excluded.correct_answer,
   incorrect_answer_1 = excluded.incorrect_answer_1,
   incorrect_answer_2 = excluded.incorrect_answer_2,
-  explanation = excluded.explanation, difficulty = excluded.difficulty,
+  explanation = excluded.explanation,
   updated_at = now();
 
 -- ===========================================================================
@@ -311,37 +313,37 @@ with l as (
   where c.slug = 'aws-saa-c03' and s.position = 1 and tp.position = 1 and l.position = 4
 )
 insert into public.certdeck_flashcard_questions
-  (lesson_id, exercise_type, position, question, correct_answer,
-   incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-select l.id, v.exercise_type, v.position, v.question, v.correct_answer,
-       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation, v.difficulty
+  (lesson_id, exercise_type, question, correct_answer,
+   incorrect_answer_1, incorrect_answer_2, explanation)
+select l.id, v.exercise_type, v.question, v.correct_answer,
+       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation
 from l,
 (values
-  ('multiple_choice', 1,
+  ('multiple_choice',
    'Capacidad de almacenamiento que ofrece S3:',
    'Prácticamente ilimitada', 'Limitada por el disco', 'Máximo 1 TB',
-   'S3 ofrece almacenamiento ilimitado y gestionado.', 1),
-  ('multiple_choice', 2,
+   'S3 ofrece almacenamiento ilimitado y gestionado.'),
+  ('multiple_choice',
    'Tamaño máximo de un objeto individual en S3:',
    '5 TB', '5 GB', '50 GB',
-   'De 0 bytes a 5 TB por objeto.', 1),
-  ('true_false', 3,
+   'De 0 bytes a 5 TB por objeto.'),
+  ('true_false',
    'Los nombres de bucket en S3 son únicos a nivel global.',
    'Verdadero', null, null,
-   'S3 es un namespace universal.', 1),
-  ('anki_card', 4,
+   'S3 es un namespace universal.'),
+  ('anki_card',
    '¿Qué representa la "Key" de un objeto?',
    'El nombre del objeto.',
    null, null,
-   'La Key identifica al objeto dentro del bucket.', 1)
-) as v(exercise_type, position, question, correct_answer,
-       incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-on conflict (lesson_id, position) do update set
-  exercise_type = excluded.exercise_type, question = excluded.question,
+   'La Key identifica al objeto dentro del bucket.')
+) as v(exercise_type, question, correct_answer,
+       incorrect_answer_1, incorrect_answer_2, explanation)
+on conflict (lesson_id, question) do update set
+  exercise_type = excluded.exercise_type,
   correct_answer = excluded.correct_answer,
   incorrect_answer_1 = excluded.incorrect_answer_1,
   incorrect_answer_2 = excluded.incorrect_answer_2,
-  explanation = excluded.explanation, difficulty = excluded.difficulty,
+  explanation = excluded.explanation,
   updated_at = now();
 
 -- ===========================================================================
@@ -372,39 +374,39 @@ with l as (
   where c.slug = 'aws-saa-c03' and s.position = 1 and tp.position = 1 and l.position = 5
 )
 insert into public.certdeck_flashcard_questions
-  (lesson_id, exercise_type, position, question, correct_answer,
-   incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-select l.id, v.exercise_type, v.position, v.question, v.correct_answer,
-       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation, v.difficulty
+  (lesson_id, exercise_type, question, correct_answer,
+   incorrect_answer_1, incorrect_answer_2, explanation)
+select l.id, v.exercise_type, v.question, v.correct_answer,
+       v.incorrect_answer_1, v.incorrect_answer_2, v.explanation
 from l,
 (values
-  ('multiple_choice', 1,
+  ('multiple_choice',
    '¿Qué es Amazon S3?',
    'Un servicio de almacenamiento de objetos',
    'Una base de datos relacional',
    'Un servicio de cómputo',
-   'S3 es almacenamiento de objetos gestionado.', 1),
-  ('true_false', 2,
+   'S3 es almacenamiento de objetos gestionado.'),
+  ('true_false',
    'S3 almacena los datos como objetos.',
    'Verdadero', null, null,
-   'S3 es object storage.', 1),
-  ('multiple_choice', 3,
+   'S3 es object storage.'),
+  ('multiple_choice',
    '¿Cuál de estos NO es un componente de un objeto S3?',
    'Tabla', 'Key', 'Metadata',
-   'Los componentes son Key, Value, Version ID y Metadata.', 2),
-  ('anki_card', 4,
+   'Los componentes son Key, Value, Version ID y Metadata.'),
+  ('anki_card',
    'Resume en una frase qué es un bucket en S3.',
    'Un contenedor donde se guardan los objetos (y carpetas) en S3.',
    null, null,
-   'El bucket es el contenedor de nivel superior.', 1)
-) as v(exercise_type, position, question, correct_answer,
-       incorrect_answer_1, incorrect_answer_2, explanation, difficulty)
-on conflict (lesson_id, position) do update set
-  exercise_type = excluded.exercise_type, question = excluded.question,
+   'El bucket es el contenedor de nivel superior.')
+) as v(exercise_type, question, correct_answer,
+       incorrect_answer_1, incorrect_answer_2, explanation)
+on conflict (lesson_id, question) do update set
+  exercise_type = excluded.exercise_type,
   correct_answer = excluded.correct_answer,
   incorrect_answer_1 = excluded.incorrect_answer_1,
   incorrect_answer_2 = excluded.incorrect_answer_2,
-  explanation = excluded.explanation, difficulty = excluded.difficulty,
+  explanation = excluded.explanation,
   updated_at = now();
 
 -- =============================================================================

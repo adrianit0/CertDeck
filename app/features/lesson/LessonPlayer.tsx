@@ -4,6 +4,8 @@ import { useState } from "react";
 import { BigButton } from "@/components/ui";
 import { AnkiCard, type AnkiGrade } from "./exercises/AnkiCard";
 import { ChoiceQuestion } from "./exercises/ChoiceQuestion";
+import { TextInputQuestion } from "./exercises/TextInputQuestion";
+import { shuffle } from "@/lib/shuffle";
 import type { FlashcardQuestion, PlayableLesson } from "@/lib/types";
 import styles from "./lesson.module.css";
 
@@ -32,7 +34,9 @@ export function LessonPlayer({ data, onFinish }: LessonPlayerProps) {
   const [phase, setPhase] = useState<Phase>(() => initialPhase(data));
   const [screenIndex, setScreenIndex] = useState(0);
 
-  const [queue, setQueue] = useState<FlashcardQuestion[]>(questions);
+  // Todas las preguntas de la lección se barajan al empezar y se muestran en
+  // orden aleatorio (ya no hay `position`).
+  const [queue, setQueue] = useState<FlashcardQuestion[]>(() => shuffle(questions));
   const [queueIndex, setQueueIndex] = useState(0);
   const [counted, setCounted] = useState<Set<string>>(new Set());
   const [correctCount, setCorrectCount] = useState(0);
@@ -137,6 +141,12 @@ export function LessonPlayer({ data, onFinish }: LessonPlayerProps) {
       </div>
       {current.exercise_type === "anki_card" ? (
         <AnkiCard key={`${current.id}-${queueIndex}`} question={current} onGrade={handleAnki} />
+      ) : current.exercise_type === "text_input" ? (
+        <TextInputQuestion
+          key={`${current.id}-${queueIndex}`}
+          question={current}
+          onAnswered={handleChoice}
+        />
       ) : (
         <ChoiceQuestion
           key={`${current.id}-${queueIndex}`}

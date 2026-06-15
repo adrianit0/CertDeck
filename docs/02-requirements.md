@@ -19,7 +19,7 @@
 | **Tema** | Conjunto de lecciones sobre un área concreta. |
 | **Lección** | Unidad mínima de estudio; contiene pantallas de contenido y ejercicios. |
 | **Pantalla de contenido** | Bloque explicativo dentro de una lección, mostrado poco a poco. |
-| **Ejercicio** | Interacción evaluable: tarjeta ANKI, test, verdadero/falso o examen. |
+| **Ejercicio** | Interacción evaluable: tarjeta ANKI, test, verdadero/falso, respuesta escrita o examen. Ver [catálogo](06-tipos-de-ejercicio.md). |
 | **Tarjeta (flashcard)** | Ejercicio frontal/reverso con autoevaluación (Incorrecto/Correcto/Muy fácil). |
 | **Repaso** | Lección que reutiliza preguntas previas según el algoritmo espaciado. |
 | **Corrección de errores** | Lección centrada en preguntas que el usuario falló. |
@@ -79,6 +79,14 @@
 
 - **RF-22** Se muestra una afirmación; el usuario responde Verdadero o Falso.
 - **RF-23** El acierto/fallo se registra; tras responder se muestra una explicación breve.
+
+### 3.5bis Ejercicio — Respuesta escrita (`text_input`)
+
+> Tipo pensado **casi exclusivamente** para respuestas de **1 palabra** o **1 número**. Ver el [catálogo de tipos de ejercicio](06-tipos-de-ejercicio.md).
+
+- **RF-23a** Se muestra una pregunta con un **input de texto** y, debajo, **un hueco por cada letra** de la respuesta (el usuario ve cuántas letras tiene).
+- **RF-23b** La comprobación es **tolerante**: ignora mayúsculas/minúsculas y espacios sobrantes, y **sustituye tildes y diacríticos** en **ambas** respuestas (correcta y del usuario) antes de comparar — p. ej., con respuesta `España`, el usuario que escriba ` éspanA` **acierta** (alguien sin "ñ" puede usar "n").
+- **RF-23c** Si el usuario **falla la primera vez**, en la corrección se le revela **una letra** como pista (p. ej. `_ E _ _ _ _ _ _`) y puede **reintentar una vez**; si acertó a la primera cuenta como correcto, si necesitó la pista queda registrado como fallo para repasos/errores.
 
 ### 3.6 Ejercicio — Preguntas de examen ("lecciones de preguntas")
 
@@ -237,6 +245,8 @@
 
 ### 6.3 Ejercicios y evaluación
 - **RN-09** Las respuestas de test, V/F y examen se muestran siempre en orden aleatorio.
+- **RN-09b** Las **preguntas** de una lección **no tienen `position`**: se extraen todas al empezar y se presentan en **orden aleatorio**. Las preguntas tampoco tienen `difficulty` (se prima la calidad sobre forzar un reparto por dificultad).
+- **RN-09c** En `text_input`, la comprobación normaliza ambas respuestas (mayúsculas, espacios, tildes/diacríticos) antes de comparar; el primer fallo da una pista de una letra y permite un reintento (RF-23a…RF-23c).
 - **RN-10** En examen, la correcta es `answer_1` (única) o las primeras `correct_answers_count` (múltiple); el orden interno nunca se expone.
 - **RN-11** En examen múltiple, se cuenta acierto solo con selección exactamente igual al conjunto correcto.
 - **RN-12** Una pregunta puede reutilizarse en varias lecciones mediante la jerarquía, sin duplicarla.
@@ -346,11 +356,14 @@ Tras completar una lección:
 ## 10. Tipos de ejercicio y de lección (referencia)
 
 ### 10.1 Tipos de ejercicio
+> Catálogo detallado (propiedades y funcionamiento) en [docs/06-tipos-de-ejercicio.md](06-tipos-de-ejercicio.md).
+
 | Código (`exercise_type`) | Descripción | Origen (`question_source`) |
 |---|---|---|
 | `anki_card` | Tarjeta frontal/reverso con autoevaluación | `flashcard` |
 | `multiple_choice` | Test de 3 respuestas, 1 correcta | `flashcard` |
 | `true_false` | Verdadero/Falso con explicación | `flashcard` |
+| `text_input` | Respuesta escrita (1 palabra/número), comprobación tolerante + pista | `flashcard` |
 | `exam_single` | Examen respuesta única | `exam` |
 | `exam_multiple` | Examen respuesta múltiple | `exam` |
 
@@ -461,3 +474,4 @@ Esta fase se considera **aprobada** cuando el propietario confirma que:
 | 1.0.0 | 2026-06-14 | Versión inicial de Requisitos (Fase 2). Pendiente de aprobación. |
 | 1.1.0 | 2026-06-15 | Integradas las decisiones Q-01…Q-06 (RN-06, RN-07, RN-13, RN-16, §16). Estado: aprobada. |
 | 1.2.0 | 2026-06-15 | Revisión mayor: barra de navegación inferior (Cursos/Repasos/Progresos/Perfil), curso/etapa activos (§3.1, RN-27/28, ADR 0004); tema solo nombre sin resumen (RF-05); ronda de corrección (§3.6bis, RN-17); composición dinámica de repaso/errores/finales reciclando preguntas, solo `normal`/examen con preguntas propias (§3.9, RN-21…26, ADR 0005); lección a pantalla completa con botones abajo, fuente mayor y Markdown negrita (§3.12, RF-50…53). |
+| 1.3.0 | 2026-06-15 | Limpieza del modelo de juego: lecciones sin `estimated_minutes`; preguntas flashcard sin `position` (orden aleatorio) ni `difficulty` (RN-09b). Nuevo tipo de ejercicio **`text_input`** (respuesta escrita con comprobación tolerante y pista) (§3.5bis, RF-23a…c, RN-09c, §10.1) y nuevo [catálogo de tipos de ejercicio](06-tipos-de-ejercicio.md). SQL: `script-004.sql`. |

@@ -86,7 +86,6 @@ export function TopicScreen() {
             <h3 style={{ margin: 0, fontSize: "var(--cd-text-base)" }}>{lesson.title}</h3>
             <p style={{ margin: "4px 0 0", fontSize: "var(--cd-text-sm)", color: "var(--cd-ink-600)" }}>
               {STATUS_LABEL[status]}
-              {lesson.estimated_minutes ? ` · ${lesson.estimated_minutes} min` : ""}
             </p>
           </Card>
         );
