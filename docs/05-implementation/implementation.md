@@ -345,6 +345,28 @@ La escritura `completeLesson` ya pasaba por `certdeck-progress-complete-lesson` 
 
 ---
 
+## Contenido — Tema 2 "S3 Bucket" (2026-06-16)
+
+> Segundo tema de la etapa "Básico", a partir de las diapositivas 19–22 del `Manual.pptx`.
+
+### Estructura (7 lecciones)
+- **L1 normal** — Visión general de los buckets (slide 19)
+- **L2 normal** — Reglas de nombrado de buckets (slide 20)
+- **L3 review** — Repaso: buckets y nombrado *(sin preguntas propias; recicla)*
+- **L4 normal** — Ejemplos de nombres válidos e inválidos (slide 21)
+- **L5 normal** — Restricciones y límites de los buckets (slide 22)
+- **L6 review** — Repaso: ejemplos y límites *(sin preguntas propias; recicla)*
+- **L7 final** — Lección final: S3 Bucket *(sin preguntas propias; recicla ~6 del tema)*
+
+### Archivo
+- **Nuevo:** `supabase/sql_contenido/20260616_03_aws-saa-c03.sql` (tema `position = 2` en la etapa "Básico"; pantallas + preguntas solo en las 4 lecciones `normal`; intro en review/final). Idempotente. **No aplicado por el agente (§4).**
+- Conforme a la **enmienda del ADR 0005**: las lecciones `review`/`final` no llevan `INSERT` de `certdeck_flashcard_questions`.
+
+### Instrucción manual
+Aplicar el fragmento en el SQL Editor (tras los fragmentos 01/02). El orden alfabético del nombre garantiza el orden de ejecución.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -357,3 +379,4 @@ La escritura `completeLesson` ya pasaba por `certdeck-progress-complete-lesson` 
 | 1.5.0 | 2026-06-15 | Modo oscuro conmutable y persistente (clase `.dark` + remapeo de variables de tema Tailwind v4; `lib/theme`, `useTheme`, script anti-parpadeo). |
 | 1.6.0 | 2026-06-15 | Migración de la persistencia del progreso a la BD (ADR 0006): se elimina `localProgress` (localStorage), estado optimista en memoria + write-through, lectura desde `certdeck-progress-get`, banner/bloqueo offline; `script-005.sql` y 3 Edge Functions nuevas + 1 modificada (entregadas, no aplicadas). |
 | 1.7.0 | 2026-06-16 | Composición dinámica de `review`/`final` del catálogo (ADR 0005 enmienda): `certdeck-playable-lesson` recicla ~4 tarjetas de las 5 lecciones anteriores (review) o ~6 del mismo tema (final). Redepliegue manual pendiente. |
+| 1.8.0 | 2026-06-16 | Contenido: tema 2 "S3 Bucket" (slides 19–22), 7 lecciones (4 normales con preguntas + 2 review + 1 final que reciclan). Fragmento `20260616_03_aws-saa-c03.sql` entregado (no aplicado). |
