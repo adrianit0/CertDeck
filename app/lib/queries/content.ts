@@ -91,6 +91,31 @@ export async function getLessonsByTopic(topicId: string): Promise<Lesson[]> {
   return (data ?? []) as Lesson[];
 }
 
+const QUESTION_COLUMNS =
+  "id, lesson_id, exercise_type, question, correct_answer, incorrect_answer_1, incorrect_answer_2, explanation";
+
+/** Preguntas de un conjunto de lecciones (para repasos por tema / generales). */
+export async function getQuestionsByLessons(lessonIds: string[]): Promise<FlashcardQuestion[]> {
+  if (lessonIds.length === 0) return [];
+  const { data, error } = await getSupabaseClient()
+    .from("certdeck_flashcard_questions")
+    .select(QUESTION_COLUMNS)
+    .in("lesson_id", lessonIds);
+  if (error) throw error;
+  return (data ?? []) as FlashcardQuestion[];
+}
+
+/** Preguntas concretas por id (para repasos de errores acumulados). */
+export async function getQuestionsByIds(questionIds: string[]): Promise<FlashcardQuestion[]> {
+  if (questionIds.length === 0) return [];
+  const { data, error } = await getSupabaseClient()
+    .from("certdeck_flashcard_questions")
+    .select(QUESTION_COLUMNS)
+    .in("id", questionIds);
+  if (error) throw error;
+  return (data ?? []) as FlashcardQuestion[];
+}
+
 export async function getPlayableLesson(lessonId: string): Promise<PlayableLesson | null> {
   const supabase = getSupabaseClient();
 

@@ -195,11 +195,29 @@ Recorrido de aprendizaje funcional de extremo a extremo: catálogo → curso →
 - **Conservado** para la futura lógica: `lib/*` (queries, supabase, progreso, sesión), `hooks/*` y `features/lesson/engine/*` (lógica pura testeada de opciones y respuesta de texto).
 
 ### Pendiente (a conectar según roadmap)
-- Sustituir `mockData` por `lib/queries` (contenido real) y el progreso por `certdeck_user_*` + Edge Functions (ADR 0002).
 - Reutilizar `engine/textAnswer` y `engine/options` en el nuevo `LessonPlayer` al cablear la lógica real.
 
 ### Validación local
 - `typecheck`, `lint`, `test` (17) y `build` (export estático) en verde; tokens de marca y clases auxiliares (volteo 3D) presentes en el CSS exportado.
+
+---
+
+## Cableado del contenido y progreso reales (2026-06-15)
+
+> Se retira por completo el `mockData` y la UI del shell pasa a consumir **datos reales de Supabase** (`lib/queries`) y el **progreso real** (capa optimista local + Edge Function `certdeck-progress-complete-lesson`, ADR 0002).
+
+### Cambios
+- **Eliminado** `app/features/shell/mockData.ts` y todos los valores hardcodeados (XP/racha/contadores "12 vencidas", nombre/email de perfil, etiquetas "(Mock)").
+- `AppShell.tsx`: carga `getCourses` → `getStagesWithTopics` → `getLessonsByTopic` del curso activo; deriva el estado de cada lección con `computeLessonStatus` (desbloqueo lineal por tema) y las métricas con `computeUserStats`. Estados de carga/error/vacío. Perfil con la sesión de `useSession`.
+- `LessonPlayer.tsx`: carga teoría+preguntas con `getPlayableLesson`; en repasos recibe las preguntas ya cargadas por el shell. Emite un `SessionResult` completo (aciertos, anki, XP, preguntas falladas/superadas).
+- `lib/progress/localProgress.ts`: estado enriquecido (conteos, anki, XP por lección), set de preguntas falladas para los repasos de errores, actividad de repaso, racha por días activos, `computeUserStats` y `resetProgress`; migración del formato legado.
+- `lib/queries/content.ts`: `getQuestionsByLessons` y `getQuestionsByIds` (repasos por tema/general/errores). `completeLesson` acepta `SessionResult`.
+- `RepasosTab`/`ProgresosTab`/`PerfilTab`: métricas y textos derivados de datos reales; las sesiones de "errores" se deshabilitan sin errores pendientes.
+
+> **Nota:** la RLS de contenido es `to authenticated`; sin sesión activa (el login es vía Edge Functions externas) los listados muestran su estado de carga/vacío. No se añade UI de login en este cambio.
+
+### Validación local
+- `typecheck`, `lint`, `test` (17) y `build` (export estático) en verde.
 
 ---
 
@@ -209,3 +227,4 @@ Recorrido de aprendizaje funcional de extremo a extremo: catálogo → curso →
 |---|---|---|
 | 1.0.0 | 2026-06-15 | Bitácora inicial con iteración v0 (fundaciones del frontend). |
 | 1.1.0 | 2026-06-15 | Maquetación de UI a partir del mockup: Tailwind v4 + lucide-react, shell con barra inferior (ADR 0004) y reproductor de lección; UI v1 retirada. Solo diseño; datos mock pendientes de cablear. |
+| 1.2.0 | 2026-06-15 | Cableado de contenido y progreso reales: se retira `mockData`; el shell consume `lib/queries` (Supabase) y el progreso real (local optimista + Edge Function). Métricas reales (XP, racha, errores). |

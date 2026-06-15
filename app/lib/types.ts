@@ -81,10 +81,32 @@ export interface LessonResult {
   scorePercentage: number;
 }
 
+/** Pregunta fallada (id + lección a la que pertenece), para los repasos de errores. */
+export interface FailedQuestionRef {
+  id: string;
+  lessonId: string;
+}
+
+/**
+ * Resultado completo de una sesión del reproductor (lección o repaso).
+ * Recoge lo necesario para persistir progreso real y alimentar las métricas.
+ */
+export interface SessionResult {
+  correctCount: number;
+  incorrectCount: number;
+  scorePercentage: number;
+  ankiCount: number;
+  xpGained: number;
+  /** Preguntas con respuesta final incorrecta (se acumulan para "errores"). */
+  failedQuestions: FailedQuestionRef[];
+  /** Preguntas resueltas correctamente (se retiran del set de errores). */
+  passedQuestionIds: string[];
+}
+
 /**
  * Métricas de usuario para la cabecera y la pestaña de Progresos.
- * En el prototipo de UI son datos mock; se conectarán al progreso real
- * (certdeck_user_*) a medida que avance el roadmap.
+ * Se derivan del progreso real persistido (capa optimista local + Edge
+ * Functions / tablas `certdeck_user_*`).
  */
 export interface UserStats {
   xp: number;

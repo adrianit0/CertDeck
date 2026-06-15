@@ -2,7 +2,7 @@
 
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { markLessonCompleted } from "@/lib/progress/localProgress";
-import type { LessonResult } from "@/lib/types";
+import type { SessionResult } from "@/lib/types";
 
 /**
  * Persiste la finalización de una lección.
@@ -12,8 +12,8 @@ import type { LessonResult } from "@/lib/types";
  *    (ADR 0002). Si aún no está desplegada o falla, NO rompe la experiencia:
  *    el progreso local mantiene la app usable y se reconciliará más adelante.
  */
-export async function completeLesson(lessonId: string, result: LessonResult): Promise<void> {
-  markLessonCompleted(lessonId, result.scorePercentage);
+export async function completeLesson(lessonId: string, result: SessionResult): Promise<void> {
+  markLessonCompleted(lessonId, result);
 
   try {
     await getSupabaseClient().functions.invoke("certdeck-progress-complete-lesson", {

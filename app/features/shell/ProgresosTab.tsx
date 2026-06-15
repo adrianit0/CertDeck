@@ -20,9 +20,8 @@ export default function ProgresosTab({ stats, lessons, topics, activeStage }: Pr
   const completedStageLessons = stageLessons.filter((l) => l.status === "completed").length;
   const stagePercent = Math.round((completedStageLessons / Math.max(stageLessons.length, 1)) * 100);
 
-  const totalAnswers = stats.totalAnswers || 15;
-  const correctAnswers = stats.correctAnswers || 12;
-  const successRate = Math.round((correctAnswers / totalAnswers) * 100);
+  const successRate =
+    stats.totalAnswers > 0 ? Math.round((stats.correctAnswers / stats.totalAnswers) * 100) : 0;
 
   const xpForNextLevel = 1000;
   const currentXp = stats.xp % xpForNextLevel;

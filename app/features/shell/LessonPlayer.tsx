@@ -12,15 +12,18 @@ import {
   Trophy,
   Check,
   Zap,
+  Loader2,
 } from "lucide-react";
-import type { LessonScreen, FlashcardQuestion } from "@/lib/types";
-import { MOCK_LESSON_SCREENS, MOCK_QUESTIONS, MOCK_REVIEWS_POOL } from "./mockData";
+import type { LessonScreen, FlashcardQuestion, SessionResult } from "@/lib/types";
+import { getPlayableLesson } from "@/lib/queries/content";
 
 interface LessonPlayerProps {
   lessonId: string;
   isReviewSession?: boolean;
   reviewType?: string;
-  onClose: (completed: boolean, correctAnswers: number, xpGained: number) => void;
+  /** Preguntas ya cargadas de BD para las sesiones de repaso. */
+  reviewQuestions?: FlashcardQuestion[];
+  onClose: (completed: boolean, result: SessionResult | null) => void;
   activeCourseTitle: string;
 }
 
@@ -37,30 +40,47 @@ interface AnswerRecord {
 export default function LessonPlayer({
   lessonId,
   isReviewSession = false,
-  reviewType = "",
+  reviewQuestions = [],
   onClose,
   activeCourseTitle,
 }: LessonPlayerProps) {
   const [screens, setScreens] = useState<LessonScreen[]>([]);
   const [questions, setQuestions] = useState<FlashcardQuestion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
+    let active = true;
+
+    // Repaso: las preguntas ya vienen cargadas desde BD por el shell.
     if (isReviewSession) {
-      if (reviewType === "topic-review") {
-        setQuestions(MOCK_QUESTIONS.filter((q) => q.lesson_id === "lesson-s3-2"));
-      } else if (reviewType === "topic-errors") {
-        setQuestions(MOCK_QUESTIONS.slice(0, 2));
-      } else if (reviewType === "general-errors") {
-        setQuestions(MOCK_REVIEWS_POOL.slice(0, 3));
-      } else {
-        setQuestions([...MOCK_QUESTIONS.slice(0, 2), ...MOCK_REVIEWS_POOL]);
-      }
       setScreens([]);
-    } else {
-      setScreens(MOCK_LESSON_SCREENS.filter((s) => s.lesson_id === lessonId));
-      setQuestions(MOCK_QUESTIONS.filter((q) => q.lesson_id === lessonId));
+      setQuestions(reviewQuestions);
+      setLoadError(false);
+      setLoading(false);
+      return;
     }
-  }, [lessonId, isReviewSession, reviewType]);
+
+    // Lección normal: contenido real (pantallas + preguntas) desde Supabase.
+    setLoading(true);
+    setLoadError(false);
+    getPlayableLesson(lessonId)
+      .then((data) => {
+        if (!active) return;
+        setScreens(data?.screens ?? []);
+        setQuestions(data?.questions ?? []);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoadError(true);
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [lessonId, isReviewSession, reviewQuestions]);
 
   const [playerStep, setPlayerStep] = useState<PlayerStep>("content");
 
@@ -290,6 +310,19 @@ export default function LessonPlayer({
   const correctRate = Math.round((totalCorrectToReport / Math.max(totalExercises, 1)) * 100);
   const xpGained = totalCorrectToReport * 50 + (isReviewSession ? 100 : 250);
 
+  // Empaqueta el resultado real de la sesión para persistir progreso y métricas.
+  const buildSessionResult = (): SessionResult => ({
+    correctCount: totalCorrectToReport,
+    incorrectCount: Math.max(totalExercises - totalCorrectToReport, 0),
+    scorePercentage: correctRate,
+    ankiCount: questions.filter((q) => q.exercise_type === "anki_card").length,
+    xpGained,
+    failedQuestions: questions
+      .filter((q) => !answersLog[q.id]?.finalCorrect)
+      .map((q) => ({ id: q.id, lessonId: q.lesson_id })),
+    passedQuestionIds: questions.filter((q) => answersLog[q.id]?.finalCorrect).map((q) => q.id),
+  });
+
   const renderTextInputBlanks = () => {
     if (!activeQuestion) return null;
     const characters = activeQuestion.correct_answer.split("");
@@ -320,6 +353,42 @@ export default function LessonPlayer({
     );
   };
 
+  // Estados de carga / error / sin contenido (datos reales de BD).
+  if (loading || loadError || (screens.length === 0 && questions.length === 0)) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col items-center justify-center md:max-w-md mx-auto shadow-2xl p-8 text-center gap-5">
+        {loading ? (
+          <>
+            <Loader2 className="w-10 h-10 text-brand-primary animate-spin" />
+            <p className="text-sm font-bold text-slate-500">Cargando sesión…</p>
+          </>
+        ) : (
+          <>
+            <div className="w-16 h-16 rounded-3xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="font-black text-slate-800 text-lg tracking-tight">
+                {loadError ? "No se pudo cargar la sesión" : "Sin contenido disponible"}
+              </h2>
+              <p className="text-sm text-slate-500 leading-relaxed max-w-[280px]">
+                {loadError
+                  ? "Revisa tu conexión o inicia sesión e inténtalo de nuevo."
+                  : "Esta sesión todavía no tiene preguntas ni teoría cargadas."}
+              </p>
+            </div>
+            <button
+              onClick={() => onClose(false, null)}
+              className="px-6 py-3 rounded-2xl bg-brand-primary text-white font-extrabold text-sm hover:bg-brand-primary-hover shadow-lg"
+            >
+              Volver
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col md:max-w-md mx-auto shadow-2xl select-none">
       {/* Cabecera */}
@@ -328,7 +397,7 @@ export default function LessonPlayer({
           id="btn-close-session"
           onClick={() => {
             if (window.confirm("¿Seguro que quieres salir de la lección? Perderás el progreso de esta tanda.")) {
-              onClose(false, 0, 0);
+              onClose(false, null);
             }
           }}
           className="w-10 h-10 -ml-1 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50/50 transition"
@@ -653,7 +722,7 @@ export default function LessonPlayer({
             </div>
 
             <div className="pt-6 shrink-0">
-              <button id="btn-finalize-lesson" onClick={() => onClose(true, totalCorrectToReport, xpGained)} className="w-full py-4 rounded-2xl bg-brand-primary text-white font-extrabold text-sm hover:bg-brand-primary-hover shadow-lg shadow-blue-500/10 flex items-center justify-center gap-2 active:scale-95 transition-all">
+              <button id="btn-finalize-lesson" onClick={() => onClose(true, buildSessionResult())} className="w-full py-4 rounded-2xl bg-brand-primary text-white font-extrabold text-sm hover:bg-brand-primary-hover shadow-lg shadow-blue-500/10 flex items-center justify-center gap-2 active:scale-95 transition-all">
                 Volver al Menú Central
               </button>
             </div>

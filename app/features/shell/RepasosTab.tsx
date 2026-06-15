@@ -6,49 +6,49 @@ interface ReviewSession {
   id: string;
   title: string;
   description: string;
-  questionCount: number;
   icon: LucideIcon;
   badgeColor: string;
+  /** Si requiere errores acumulados, se deshabilita cuando no hay ninguno. */
+  needsErrors?: boolean;
 }
 
 interface RepasosTabProps {
   onStartReview: (reviewType: string) => void;
-  incorrectCount: number;
+  pendingErrors: number;
+  completedLessons: number;
 }
 
-export default function RepasosTab({ onStartReview, incorrectCount }: RepasosTabProps) {
+export default function RepasosTab({ onStartReview, pendingErrors, completedLessons }: RepasosTabProps) {
   const sessions: ReviewSession[] = [
     {
       id: "topic-review",
       title: "Repaso de Tema",
-      description: "Sesión corta sobre el tema activo de Amazon S3 con algoritmo ANKI.",
-      questionCount: 4,
+      description: "Sesión corta sobre los temas de la etapa activa con algoritmo ANKI.",
       icon: Files,
       badgeColor: "bg-blue-100 text-blue-600",
     },
     {
       id: "general-review",
       title: "Repaso General",
-      description: "Prueba aleatoria acumulativa de todos los temas desbloqueados de AWS.",
-      questionCount: 8,
+      description: "Prueba aleatoria acumulativa de todos los temas del curso activo.",
       icon: Layers,
       badgeColor: "bg-sky-100 text-sky-600",
     },
     {
       id: "topic-errors",
       title: "Errores de Tema",
-      description: "Corrige y re-intenta las preguntas falladas recientemente en S3.",
-      questionCount: Math.max(incorrectCount > 0 ? Math.min(incorrectCount, 2) : 1, 1),
+      description: "Corrige y re-intenta las preguntas falladas de la etapa activa.",
       icon: AlertTriangle,
       badgeColor: "bg-amber-100 text-amber-600",
+      needsErrors: true,
     },
     {
       id: "general-errors",
       title: "Errores Generales",
-      description: "Práctica enfocada en todos tus fallos históricos acumulados.",
-      questionCount: Math.max(incorrectCount, 3),
+      description: "Práctica enfocada en todos tus fallos acumulados del curso.",
       icon: Calendar,
       badgeColor: "bg-rose-100 text-rose-600",
+      needsErrors: true,
     },
   ];
 
@@ -72,18 +72,18 @@ export default function RepasosTab({ onStartReview, incorrectCount }: RepasosTab
         </div>
       </div>
 
-      {/* Métricas de vencimiento */}
+      {/* Métricas reales */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white border border-slate-100 rounded-2xl p-4.5 space-y-1 text-center shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tarjetas Vencidas</span>
-          <span className="text-3xl font-extrabold text-blue-600 tracking-tight">12</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Lecciones Completadas</span>
+          <span className="text-3xl font-extrabold text-blue-600 tracking-tight">{completedLessons}</span>
           <span className="text-[10px] text-emerald-600 font-semibold block bg-emerald-50 py-0.5 rounded-full mt-1.5 border border-emerald-100/50">
-            Pendientes de repasar
+            Disponibles para repasar
           </span>
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4.5 space-y-1 text-center shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Errores Pendientes</span>
-          <span className="text-3xl font-extrabold text-rose-500 tracking-tight">{Math.max(incorrectCount, 3)}</span>
+          <span className="text-3xl font-extrabold text-rose-500 tracking-tight">{pendingErrors}</span>
           <span className="text-[10px] text-rose-600 font-semibold block bg-rose-50 py-0.5 rounded-full mt-1.5 border border-rose-100/50">
             Por recuperar
           </span>
@@ -97,12 +97,18 @@ export default function RepasosTab({ onStartReview, incorrectCount }: RepasosTab
         <div className="space-y-4">
           {sessions.map((session) => {
             const Icon = session.icon;
+            const disabled = session.needsErrors === true && pendingErrors === 0;
             return (
               <button
                 key={session.id}
                 id={`btn-review-${session.id}`}
+                disabled={disabled}
                 onClick={() => onStartReview(session.id)}
-                className="w-full text-left bg-white border border-slate-100 rounded-3xl p-5 shadow-[0_5px_15px_rgba(0,0,0,0.02)] transition-all duration-300 hover:border-slate-200 hover:shadow-md active:scale-[0.98] flex items-center justify-between gap-4 group"
+                className={`w-full text-left bg-white border border-slate-100 rounded-3xl p-5 shadow-[0_5px_15px_rgba(0,0,0,0.02)] transition-all duration-300 flex items-center justify-between gap-4 group ${
+                  disabled
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:border-slate-200 hover:shadow-md active:scale-[0.98]"
+                }`}
               >
                 <div className="flex items-start gap-4 flex-1">
                   <div className={`p-3.5 rounded-2xl shrink-0 ${session.badgeColor}`}>
@@ -111,9 +117,11 @@ export default function RepasosTab({ onStartReview, incorrectCount }: RepasosTab
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h4 className="font-extrabold text-[15px] text-slate-800">{session.title}</h4>
-                      <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full">
-                        {session.questionCount} {session.questionCount === 1 ? "card" : "cards"}
-                      </span>
+                      {session.needsErrors && (
+                        <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full">
+                          {pendingErrors} {pendingErrors === 1 ? "error" : "errores"}
+                        </span>
+                      )}
                     </div>
                     <p className="text-slate-500 text-xs leading-relaxed pr-2">{session.description}</p>
                   </div>

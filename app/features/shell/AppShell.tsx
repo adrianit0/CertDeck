@@ -1,9 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Trophy, Zap } from "lucide-react";
-import type { Course, Stage, Topic, LessonWithStatus, LessonStatus, UserStats } from "@/lib/types";
-import { MOCK_COURSES, MOCK_STAGES, MOCK_TOPICS, MOCK_LESSONS } from "./mockData";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Trophy, Zap, Loader2, AlertCircle } from "lucide-react";
+import type {
+  Course,
+  Stage,
+  Topic,
+  Lesson,
+  LessonWithStatus,
+  FlashcardQuestion,
+} from "@/lib/types";
+import {
+  getCourses,
+  getStagesWithTopics,
+  getLessonsByTopic,
+  getQuestionsByLessons,
+  getQuestionsByIds,
+} from "@/lib/queries/content";
+import { completeLesson } from "@/lib/queries/progress";
+import {
+  getProgressState,
+  computeLessonStatus,
+  computeUserStats,
+  recordReviewSession,
+  resetProgress,
+  type ProgressState,
+} from "@/lib/progress/localProgress";
+import { shuffle } from "@/lib/shuffle";
+import { useSession } from "@/hooks/useSession";
 import Navigation from "./Navigation";
 import CoursesTab from "./CoursesTab";
 import RepasosTab from "./RepasosTab";
@@ -11,107 +35,279 @@ import ProgresosTab from "./ProgresosTab";
 import PerfilTab from "./PerfilTab";
 import LessonPlayer from "./LessonPlayer";
 
+interface CourseData {
+  stages: Stage[];
+  topics: Topic[];
+  lessons: Lesson[];
+}
+
+const REVIEW_LESSON_ID = "__review-session__";
+const TOPIC_REVIEW_SIZE = 5;
+const GENERAL_REVIEW_SIZE = 10;
+
+/** Construye las lecciones con su estado de desbloqueo (lineal por tema). */
+function buildLessonsWithStatus(
+  lessons: Lesson[],
+  topics: Topic[],
+  lessonProgress: ProgressState["lessons"],
+): LessonWithStatus[] {
+  const result: LessonWithStatus[] = [];
+  for (const topic of topics) {
+    const topicLessons = lessons
+      .filter((l) => l.topic_id === topic.id)
+      .sort((a, b) => a.position - b.position);
+    const ids = topicLessons.map((l) => l.id);
+    topicLessons.forEach((lesson, index) => {
+      result.push({ ...lesson, status: computeLessonStatus(index, ids, lessonProgress) });
+    });
+  }
+  return result;
+}
+
 /**
- * Shell principal de la app (prototipo de UI fiel al mockup de Google AI Studio).
- * Navegación por pestañas con barra inferior (ADR 0004) y reproductor de lección
- * a pantalla completa (modo concentración). Los datos son mock; la lógica real se
- * conectará a medida que avance el roadmap.
+ * Shell principal de la app: navegación por pestañas con barra inferior
+ * (ADR 0004) y reproductor de lección a pantalla completa. El contenido se
+ * obtiene de Supabase (`lib/queries`) y el progreso/métricas del progreso real
+ * (capa optimista local + Edge Functions, ADR 0002).
  */
 export default function AppShell() {
+  const { session } = useSession();
+
   const [activeTab, setActiveTab] = useState("cursos");
 
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [isReviewSession, setIsReviewSession] = useState(false);
   const [reviewType, setReviewType] = useState("");
+  const [reviewQuestions, setReviewQuestions] = useState<FlashcardQuestion[]>([]);
 
-  const [courses] = useState<Course[]>(MOCK_COURSES);
-  const [stages] = useState<Stage[]>(MOCK_STAGES);
-  const [topics] = useState<Topic[]>(MOCK_TOPICS);
-  const [lessons, setLessons] = useState<LessonWithStatus[]>(MOCK_LESSONS);
+  // Catálogo de cursos.
+  const [courses, setCourses] = useState<Course[] | null>(null);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [coursesError, setCoursesError] = useState(false);
 
-  const [activeCourseId, setActiveCourseId] = useState("aws-saa-c03");
-  const [activeStageId, setActiveStageId] = useState("aws-stage-1");
+  // Contenido del curso activo (etapas + temas + lecciones).
+  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  const [activeStageId, setActiveStageId] = useState<string | null>(null);
+  const [courseData, setCourseData] = useState<CourseData | null>(null);
+  const [courseLoading, setCourseLoading] = useState(false);
+  const [courseError, setCourseError] = useState(false);
 
-  const [stats, setStats] = useState<UserStats>({
-    xp: 2450,
-    streak: 5,
-    lessonsCompleted: 1,
-    totalAnswers: 15,
-    correctAnswers: 12,
-    ankiCardsStudied: 32,
-  });
+  // Progreso real (localStorage optimista; se reconcilia con `certdeck_user_*`).
+  const [progress, setProgress] = useState<ProgressState>(() => getProgressState());
+  const refreshProgress = useCallback(() => setProgress(getProgressState()), []);
 
-  const [incorrectTracker, setIncorrectTracker] = useState(3);
-
-  // Alinea la etapa por defecto al cambiar de curso activo.
+  // --- Carga del catálogo de cursos ---------------------------------------
   useEffect(() => {
-    const courseStages = stages.filter((s) => s.course_id === activeCourseId).sort((a, b) => a.position - b.position);
-    const first = courseStages[0];
-    if (first) setActiveStageId(first.id);
-  }, [activeCourseId, stages]);
+    let active = true;
+    setCoursesLoading(true);
+    setCoursesError(false);
+    getCourses()
+      .then((cs) => {
+        if (!active) return;
+        setCourses(cs);
+        setActiveCourseId((prev) => prev ?? cs[0]?.id ?? null);
+        setCoursesLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCoursesError(true);
+        setCoursesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const activeCourse: Course = courses.find((c) => c.id === activeCourseId) ?? (courses[0] as Course);
-  const activeStage: Stage = stages.find((s) => s.id === activeStageId) ?? (stages[0] as Stage);
+  // --- Carga del contenido del curso activo -------------------------------
+  useEffect(() => {
+    if (!activeCourseId) return;
+    let active = true;
+    setCourseLoading(true);
+    setCourseError(false);
+    (async () => {
+      try {
+        const stagesWithTopics = await getStagesWithTopics(activeCourseId);
+        const stages: Stage[] = stagesWithTopics.map(({ topics: _topics, ...stage }) => stage);
+        const topics: Topic[] = stagesWithTopics.flatMap((s) => s.topics);
+        const lessonsByTopic = await Promise.all(topics.map((t) => getLessonsByTopic(t.id)));
+        if (!active) return;
+        setCourseData({ stages, topics, lessons: lessonsByTopic.flat() });
+        setActiveStageId(stages[0]?.id ?? null);
+        setCourseLoading(false);
+      } catch {
+        if (!active) return;
+        setCourseError(true);
+        setCourseLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [activeCourseId]);
 
+  // --- Derivados ----------------------------------------------------------
+  const lessons = useMemo<LessonWithStatus[]>(() => {
+    if (!courseData) return [];
+    return buildLessonsWithStatus(courseData.lessons, courseData.topics, progress.lessons);
+  }, [courseData, progress.lessons]);
+
+  const stats = useMemo(() => computeUserStats(progress), [progress]);
+  const pendingErrors = useMemo(() => Object.keys(progress.failedQuestions).length, [progress]);
+
+  const activeCourse = courses?.find((c) => c.id === activeCourseId) ?? null;
+  const stages = courseData?.stages ?? [];
+  const topics = courseData?.topics ?? [];
+  const activeStage =
+    stages.find((s) => s.id === activeStageId) ?? stages[0] ?? null;
+
+  const userEmail = session?.user?.email ?? null;
+  const userName = userEmail ? (userEmail.split("@")[0] ?? "Estudiante") : "Invitado";
+
+  // --- Acciones -----------------------------------------------------------
   const handleStartLesson = (lessonId: string) => {
+    setReviewQuestions([]);
     setCurrentLessonId(lessonId);
     setIsReviewSession(false);
     setReviewType("");
   };
 
-  const handleStartReview = (type: string) => {
-    setCurrentLessonId("lesson-any-review-session");
-    setIsReviewSession(true);
+  const handleStartReview = async (type: string) => {
+    if (!courseData || !activeStage) return;
+
+    const stageLessonIds = new Set(
+      lessons
+        .filter((l) => topics.some((t) => t.id === l.topic_id && t.stage_id === activeStage.id))
+        .map((l) => l.id),
+    );
+
+    let questions: FlashcardQuestion[] = [];
+    try {
+      if (type === "topic-errors" || type === "general-errors") {
+        const failed = Object.entries(progress.failedQuestions)
+          .filter(([, lessonId]) => type === "general-errors" || stageLessonIds.has(lessonId))
+          .map(([id]) => id);
+        questions = await getQuestionsByIds(failed);
+      } else {
+        const lessonIds =
+          type === "topic-review"
+            ? Array.from(stageLessonIds)
+            : courseData.lessons.map((l) => l.id);
+        const size = type === "topic-review" ? TOPIC_REVIEW_SIZE : GENERAL_REVIEW_SIZE;
+        questions = shuffle(await getQuestionsByLessons(lessonIds)).slice(0, size);
+      }
+    } catch {
+      questions = [];
+    }
+
+    setReviewQuestions(questions);
     setReviewType(type);
+    setIsReviewSession(true);
+    setCurrentLessonId(REVIEW_LESSON_ID);
   };
 
   const handleResetProgress = () => {
-    setLessons(
-      MOCK_LESSONS.map((l) => {
-        if (l.id === "lesson-s3-1") return { ...l, status: "completed" as LessonStatus };
-        if (l.id === "lesson-s3-2" || l.id === "lesson-sec-1" || l.id === "lesson-k8s-1")
-          return { ...l, status: "available" as LessonStatus };
-        return { ...l, status: "locked" as LessonStatus };
-      }),
-    );
-    setStats({ xp: 250, streak: 5, lessonsCompleted: 1, totalAnswers: 10, correctAnswers: 8, ankiCardsStudied: 12 });
-    setIncorrectTracker(2);
+    resetProgress();
+    refreshProgress();
     setActiveTab("cursos");
   };
 
-  const handleClosePlayer = (completed: boolean, correctCount: number, xpGained: number) => {
-    if (completed && currentLessonId) {
-      setStats((prev) => ({
-        ...prev,
-        xp: prev.xp + xpGained,
-        lessonsCompleted: isReviewSession ? prev.lessonsCompleted : prev.lessonsCompleted + 1,
-        totalAnswers: prev.totalAnswers + (isReviewSession ? 8 : 4),
-        correctAnswers: prev.correctAnswers + correctCount,
-        ankiCardsStudied: prev.ankiCardsStudied + (isReviewSession ? 3 : 1),
-      }));
-
-      if (isReviewSession && (reviewType === "topic-errors" || reviewType === "general-errors")) {
-        setIncorrectTracker((prev) => Math.max(prev - 2, 0));
-      } else if (!isReviewSession) {
-        const failed = 4 - correctCount;
-        if (failed > 0) setIncorrectTracker((prev) => prev + failed);
-
-        // Desbloqueo lineal sencillo dentro del mismo tema (demo del prototipo).
-        setLessons((prev) => {
-          const current = prev.find((l) => l.id === currentLessonId);
-          if (!current) return prev;
-          const updated = prev.map((l) => (l.id === currentLessonId ? { ...l, status: "completed" as LessonStatus } : l));
-          const sameTopic = updated.filter((l) => l.topic_id === current.topic_id).sort((a, b) => a.position - b.position);
-          const next = sameTopic.find((l) => l.position > current.position && l.status === "locked");
-          if (next) return updated.map((l) => (l.id === next.id ? { ...l, status: "available" as LessonStatus } : l));
-          return updated;
-        });
+  const handleClosePlayer = (
+    completed: boolean,
+    result: Parameters<typeof completeLesson>[1] | null,
+  ) => {
+    if (completed && result) {
+      if (isReviewSession) {
+        recordReviewSession(result);
+      } else if (currentLessonId) {
+        // Persiste local (inmediato) + Edge Function autoritativa (background).
+        void completeLesson(currentLessonId, result);
       }
+      refreshProgress();
     }
 
     setCurrentLessonId(null);
     setIsReviewSession(false);
     setReviewType("");
+    setReviewQuestions([]);
+  };
+
+  // --- Render -------------------------------------------------------------
+  const renderContent = () => {
+    if (coursesLoading) {
+      return <CenteredState kind="loading" message="Cargando cursos…" />;
+    }
+    if (coursesError) {
+      return (
+        <CenteredState
+          kind="error"
+          title="No se pudieron cargar los cursos"
+          message="Revisa tu conexión o inicia sesión e inténtalo de nuevo."
+        />
+      );
+    }
+    if (!courses || courses.length === 0) {
+      return (
+        <CenteredState
+          kind="empty"
+          title="Aún no hay cursos disponibles"
+          message="Cuando haya certificaciones publicadas aparecerán aquí."
+        />
+      );
+    }
+    if (courseLoading || !courseData || !activeCourse || !activeStage) {
+      if (courseError) {
+        return (
+          <CenteredState
+            kind="error"
+            title="No se pudo cargar el curso"
+            message="Inténtalo de nuevo en unos instantes."
+          />
+        );
+      }
+      return <CenteredState kind="loading" message="Cargando contenido…" />;
+    }
+
+    return (
+      <>
+        {activeTab === "cursos" && (
+          <CoursesTab
+            courses={courses}
+            stages={stages}
+            topics={topics}
+            lessons={lessons}
+            activeCourse={activeCourse}
+            activeStage={activeStage}
+            setActiveCourseId={setActiveCourseId}
+            setActiveStageId={setActiveStageId}
+            onStartLesson={handleStartLesson}
+          />
+        )}
+
+        {activeTab === "repasos" && (
+          <RepasosTab
+            onStartReview={handleStartReview}
+            pendingErrors={pendingErrors}
+            completedLessons={stats.lessonsCompleted}
+          />
+        )}
+
+        {activeTab === "progresos" && (
+          <ProgresosTab stats={stats} lessons={lessons} topics={topics} activeStage={activeStage} />
+        )}
+
+        {activeTab === "perfil" && (
+          <PerfilTab
+            stats={stats}
+            courses={courses}
+            activeCourse={activeCourse}
+            setActiveCourseId={setActiveCourseId}
+            onResetProgress={handleResetProgress}
+            userName={userName}
+            userEmail={userEmail}
+          />
+        )}
+      </>
+    );
   };
 
   return (
@@ -139,51 +335,60 @@ export default function AppShell() {
 
         {/* Contenido principal */}
         <div className="flex-1 overflow-y-auto no-scrollbar relative min-h-0 bg-slate-50/50">
-          {currentLessonId !== null ? (
+          {currentLessonId !== null && activeCourse ? (
             <LessonPlayer
               lessonId={currentLessonId}
               isReviewSession={isReviewSession}
               reviewType={reviewType}
+              reviewQuestions={reviewQuestions}
               activeCourseTitle={activeCourse.title}
               onClose={handleClosePlayer}
             />
           ) : (
-            <>
-              {activeTab === "cursos" && (
-                <CoursesTab
-                  courses={courses}
-                  stages={stages}
-                  topics={topics}
-                  lessons={lessons}
-                  activeCourse={activeCourse}
-                  activeStage={activeStage}
-                  setActiveCourseId={setActiveCourseId}
-                  setActiveStageId={setActiveStageId}
-                  onStartLesson={handleStartLesson}
-                />
-              )}
-
-              {activeTab === "repasos" && <RepasosTab onStartReview={handleStartReview} incorrectCount={incorrectTracker} />}
-
-              {activeTab === "progresos" && (
-                <ProgresosTab stats={stats} lessons={lessons} topics={topics} activeStage={activeStage} />
-              )}
-
-              {activeTab === "perfil" && (
-                <PerfilTab
-                  stats={stats}
-                  courses={courses}
-                  activeCourse={activeCourse}
-                  setActiveCourseId={setActiveCourseId}
-                  onResetProgress={handleResetProgress}
-                />
-              )}
-            </>
+            renderContent()
           )}
         </div>
 
         {/* Barra inferior (oculta dentro de la lección) */}
         {currentLessonId === null && <Navigation activeTab={activeTab} onTabChange={setActiveTab} />}
+      </div>
+    </div>
+  );
+}
+
+/** Estado a pantalla completa para carga / error / vacío. */
+function CenteredState({
+  kind,
+  title,
+  message,
+}: {
+  kind: "loading" | "error" | "empty";
+  title?: string;
+  message: string;
+}) {
+  if (kind === "loading") {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <Loader2 className="w-9 h-9 text-brand-primary animate-spin" />
+        <p className="text-sm font-bold text-slate-500">{message}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-4 p-8 text-center">
+      <div
+        className={`w-16 h-16 rounded-3xl flex items-center justify-center border ${
+          kind === "error"
+            ? "bg-rose-50 border-rose-100 text-rose-500"
+            : "bg-slate-100 border-slate-200 text-slate-400"
+        }`}
+      >
+        <AlertCircle className="w-8 h-8" />
+      </div>
+      <div className="space-y-1">
+        {title && <h2 className="font-black text-slate-800 text-lg tracking-tight">{title}</h2>}
+        <p className="text-sm text-slate-500 leading-relaxed max-w-[280px]">{message}</p>
       </div>
     </div>
   );

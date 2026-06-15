@@ -10,12 +10,22 @@ interface PerfilTabProps {
   activeCourse: Course;
   setActiveCourseId: (id: string) => void;
   onResetProgress: () => void;
+  userName: string;
+  userEmail: string | null;
 }
 
-export default function PerfilTab({ stats, courses, activeCourse, setActiveCourseId, onResetProgress }: PerfilTabProps) {
+export default function PerfilTab({
+  stats,
+  courses,
+  activeCourse,
+  setActiveCourseId,
+  onResetProgress,
+  userName,
+  userEmail,
+}: PerfilTabProps) {
   const [detailedExplanations, setDetailedExplanations] = useState(true);
   const [dailyReminder, setDailyReminder] = useState(true);
-  const [darkModeMock, setDarkModeMock] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   return (
     <div className="pb-24 pt-4 px-4 space-y-6">
@@ -35,8 +45,8 @@ export default function PerfilTab({ stats, courses, activeCourse, setActiveCours
         </div>
 
         <div>
-          <h2 className="font-extrabold text-slate-800 text-lg">Adrián García</h2>
-          <p className="text-xs text-slate-400 font-medium">adriangarciagon@hotmail.com</p>
+          <h2 className="font-extrabold text-slate-800 text-lg capitalize">{userName}</h2>
+          <p className="text-xs text-slate-400 font-medium">{userEmail ?? "Sesión no iniciada"}</p>
         </div>
 
         <div className="bg-slate-50/70 border border-slate-100 rounded-2xl py-3 px-2 flex justify-around text-xs mt-1">
@@ -122,10 +132,10 @@ export default function PerfilTab({ stats, courses, activeCourse, setActiveCours
             {
               id: "opt-toggle-darkmode",
               icon: Moon,
-              title: "Modo Oscuro (Mock)",
-              subtitle: "Desactivado para prototipo claro",
-              value: darkModeMock,
-              onToggle: () => setDarkModeMock((v) => !v),
+              title: "Modo Oscuro",
+              subtitle: "Disponible próximamente",
+              value: darkMode,
+              onToggle: () => setDarkMode((v) => !v),
             },
           ].map((pref) => {
             const Icon = pref.icon;
@@ -165,10 +175,10 @@ export default function PerfilTab({ stats, courses, activeCourse, setActiveCours
           }}
           className="w-full text-center py-4 rounded-2xl border border-red-100 text-xs font-bold text-red-500 hover:bg-neutral-50 active:scale-[0.99] transition-all"
         >
-          Reiniciar Todo el Progreso Mock
+          Reiniciar Todo el Progreso
         </button>
         <p className="text-[10px] text-slate-400 text-center leading-relaxed px-5">
-          CertDeck v1.4.0 • Almacenamiento local en memoria reactiva para maquetas y pruebas sin servidor.
+          CertDeck • Tu progreso se guarda en este dispositivo y se sincroniza con tu cuenta.
         </p>
       </div>
     </div>
