@@ -13,6 +13,11 @@
 
 > **Nomenclatura (Constitución §7/§12.2):** todas las tablas SQL llevan prefijo **`certdeck_`** y las Edge Functions nuevas el prefijo **`certdeck-`**. Algunos nombres de tabla se citan sin prefijo por brevedad.
 
+> **Revisión de Requisitos 1.2.0 (2026-06-15) — impacto en el roadmap:**
+> - **v1** incorpora: barra de navegación inferior + curso/etapa activos (ADR 0004), catálogo de etapa con tema solo-nombre, lección a pantalla completa (botones abajo, fuente mayor, Markdown negrita), **ronda de corrección** intra-lección, y base de **examen** (sin datos).
+> - **v2** incorpora la **composición dinámica** de repaso/errores/finales reciclando preguntas ya vistas (ADR 0005); las lecciones `review`/`error_correction`/`final` dejan de llevar preguntas autoradas.
+> - El contenido `sql_contenido/20260515_02_aws-saa-c03.sql` debe **revisarse** para quitar preguntas autoradas en sus lecciones de repaso (L4) y final (L5).
+
 ## 1. Estrategia general
 
 La construcción es **incremental y vertical**: cada versión entrega una porción de valor de extremo a extremo (datos → backend → frontend) que el propietario puede validar. Se prioriza tener pronto un **camino jugable** (un curso de ejemplo recorrible) sobre completar todas las features a medias.

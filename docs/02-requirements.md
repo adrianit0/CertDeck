@@ -2,8 +2,8 @@
 
 > Fase 2 del Spec Driven Development. Define **qué** debe hacer CertDeck (no el cómo). Se rige por la [Constitución](01-constitution.md); en caso de conflicto, prevalece la Constitución. Los requisitos se identifican con códigos estables (`RF-`, `RNF-`, `HU-`, `RN-`) para poder trazarlos desde la hoja de ruta y las tareas.
 
-- **Estado:** Aprobada (actualizada con decisiones Q-01…Q-06)
-- **Versión:** 1.1.0
+- **Estado:** Aprobada (revisión mayor de UX, navegación y composición de lecciones)
+- **Versión:** 1.2.0
 - **Fecha:** 2026-06-14 · **Actualizada:** 2026-06-15
 - **Fase Spec Driven Development:** 2 — Requisitos
 - **Depende de:** Fase 1 (Constitución, aprobada)
@@ -41,14 +41,15 @@
 
 ## 3. Requisitos funcionales (RF)
 
-### 3.1 Catálogo y navegación de contenido
+### 3.1 Estructura de la app y navegación
 
-- **RF-01** El usuario puede ver el catálogo de cursos publicados (título, icono, color, dificultad, descripción).
-- **RF-02** El usuario puede abrir el detalle de un curso y ver sus etapas publicadas, en orden (`position`).
-- **RF-03** El usuario puede abrir una etapa y ver sus temas publicados, en orden.
-- **RF-04** El usuario puede abrir un tema y ver: (a) su resumen en varias pantallas y (b) la lista de lecciones del tema con su estado (bloqueada/disponible/en progreso/completada).
-- **RF-05** El resumen del tema muestra toda la información del tema repartida en pantallas, aunque ese contenido se vaya enseñando poco a poco dentro de las lecciones.
+- **RF-01** La app tiene una **barra de navegación inferior** persistente con 4 pestañas: **Cursos**, **Repasos**, **Progresos**, **Perfil** (ver §3.11).
+- **RF-02** El usuario tiene **un curso seleccionado** (lo elige una vez); ese curso permanece como activo hasta que el propio usuario decida cambiarlo. La pestaña **Cursos** muestra directamente el curso activo, **no** un catálogo para elegir cada vez.
+- **RF-03** En la parte **superior** de la pestaña Cursos se muestran el **curso activo** y la **etapa actual**; el usuario puede **cambiar** cualquiera de los dos en cualquier momento, **siempre que esté desbloqueado**.
+- **RF-04** La pestaña Cursos carga el **catálogo completo de la etapa** activa: todos sus **temas** y, dentro de cada tema, sus **lecciones** con su estado (bloqueada/disponible/en progreso/completada).
+- **RF-05** Cada **tema** se muestra como una cabecera con **solo su nombre** (formato `[Nombre del tema]`) seguida de sus lecciones. **No** se muestra el resumen del tema en el listado; al **pulsar el tema** se accede a leer su contenido.
 - **RF-06** Solo se muestra contenido con `is_published = true`; el contenido no publicado nunca es visible para el estudiante.
+- **RF-06b** El usuario puede **cambiar de curso** (selector en pestaña Cursos o en Perfil) y **cambiar de etapa** desde el selector superior, limitado a lo que tenga desbloqueado.
 
 ### 3.2 Lecciones
 
@@ -63,10 +64,10 @@
 
 - **RF-13** Se muestra el frontal de la tarjeta; el usuario intenta recordar el reverso y pulsa para revelarlo.
 - **RF-14** Tras revelar, aparecen tres botones: **Incorrecto**, **Correcto**, **Muy fácil**.
-- **RF-15** Si pulsa **Incorrecto**: la tarjeta se reencola al final de la lección actual y se actualiza su estado de repaso (ver RN de repetición espaciada).
+- **RF-15** Si pulsa **Incorrecto**: la tarjeta se marca como fallada en la **pasada principal** y entrará en la **ronda de corrección** al terminar (ver §3.6bis); se actualiza su estado de repaso (RN de repetición espaciada).
 - **RF-16** Si pulsa **Correcto**: se programa una revisión futura con intervalo moderado.
 - **RF-17** Si pulsa **Muy fácil**: se programa con un intervalo mayor.
-- **RF-18** Si el usuario falla repetidamente la misma tarjeta dentro de una lección, se da por válida para no bloquear la experiencia, **pero** se marca como tarjeta problemática para futuras revisiones.
+- **RF-18** Los tres botones **Incorrecto / Correcto / Muy fácil** se muestran con el **mismo ancho** y **anclados en la parte inferior** de la pantalla (RF-50/RF-51).
 
 ### 3.4 Ejercicio — Pregunta de tres respuestas (test)
 
@@ -79,14 +80,22 @@
 - **RF-22** Se muestra una afirmación; el usuario responde Verdadero o Falso.
 - **RF-23** El acierto/fallo se registra; tras responder se muestra una explicación breve.
 
-### 3.6 Ejercicio — Preguntas de examen
+### 3.6 Ejercicio — Preguntas de examen ("lecciones de preguntas")
 
-- **RF-24** Existe un catálogo especial de preguntas de examen (más difíciles).
-- **RF-25** Las preguntas de examen pueden aparecer en lecciones normales, repasos y lecciones finales.
+- **RF-24** Existe un catálogo especial de preguntas de examen (más difíciles), almacenado en `certdeck_exam_questions`.
+- **RF-25** Las **lecciones de preguntas** son exámenes preparados específicamente para cada ocasión. **En el MVP no se cargan datos de examen por SQL todavía**, pero la **base (tabla, tipos, UI) debe quedar preparada**.
 - **RF-26** Existe una sección específica para **practicar preguntas de examen** directamente.
 - **RF-27** Tipos de examen: respuesta única (`type_id = 1`) y respuesta múltiple (`type_id = 2`).
 - **RF-28** Internamente la respuesta correcta es `answer_1` (única) y, en múltiple, las primeras `correct_answers_count`. El frontend **siempre desordena** y **nunca** revela el orden interno.
 - **RF-29** En respuesta múltiple, el acierto solo cuenta si el usuario selecciona exactamente el conjunto correcto de respuestas.
+
+### 3.6bis Ronda de corrección de fallos (dentro de la lección)
+
+- **RF-29a** Una lección se hace en **una pasada principal**: todas las preguntas, una vez, en orden.
+- **RF-29b** Al terminar la pasada principal, **si hubo fallos**, se muestra una **pantalla motivacional** (p. ej. *"Vamos a corregir las preguntas incorrectas"*) y empieza la **ronda de corrección**: se vuelven a preguntar **solo las falladas**.
+- **RF-29c** En la ronda de corrección, si el usuario **acierta**, la pregunta se da por **recuperada** (en tarjetas ANKI se marca correcta según el algoritmo, RN-14).
+- **RF-29d** Si en la ronda de corrección **vuelve a fallar**, esa pregunta **no se vuelve a preguntar en esta lección**, pero queda **registrada como incorrecta** para mostrarse en el futuro en lecciones de **repaso**, de **errores** y otros lugares.
+- **RF-29e** El resultado de la lección refleja aciertos/fallos tras la lógica anterior (cada pregunta cuenta una vez; la recuperación en corrección cuenta como acierto).
 
 ### 3.7 Resultado y progreso
 
@@ -106,16 +115,34 @@
 - **RF-40** Si hay temas anteriores, el repaso generalista puede incluir preguntas de temas previos; si no, solo de lecciones anteriores del tema actual.
 - **RF-41** Una lección de corrección de errores puede desbloquearse automáticamente tras bajo rendimiento.
 
-### 3.9 Repaso y corrección
+### 3.9 Composición de lecciones de repaso, errores y finales
 
-- **RF-42** Las lecciones de repaso seleccionan preguntas según el algoritmo (tarjetas vencidas / pendientes) y la jerarquía `Pregunta → Lección → Tema → Etapa → Curso`.
-- **RF-43** Las lecciones de corrección de errores priorizan preguntas que el usuario falló previamente.
-- **RF-44** Las lecciones de ampliación profundizan en contenido ya aprendido y pueden incluir preguntas más difíciles.
-- **RF-45** Las lecciones finales cierran tema/etapa/curso con repaso amplio y pueden incluir preguntas de examen.
+> **Principio clave (simplifica la creación de contenido):** **solo las lecciones `normal`** (y, en el futuro, las "lecciones de preguntas"/examen) **tienen preguntas propias**. Las lecciones de **repaso**, **errores** y **finales** **no crean preguntas nuevas**: se **componen en tiempo de ejecución reciclando** preguntas ya existentes que el usuario ya ha visto. Esto evita duplicar contenido y refuerza el aprendizaje.
+
+- **RF-42** **Repaso de este tema:** incluye **únicamente preguntas ya realizadas hasta ese momento** pertenecientes a **este tema** (recicladas de sus lecciones normales de origen). No se crean preguntas nuevas.
+- **RF-43** **Repaso general:** incluye **50% preguntas de este tema + 50% de temas anteriores** (de entre las ya vistas por el usuario), para no oxidarse.
+- **RF-44** **Errores de este tema:** incluye preguntas de **este tema** que el usuario **respondió mal**. Cuando una pregunta fallada se responde correctamente, se marca como correcta según el algoritmo ANKI (RN-14). **Si no hay preguntas falladas**, la lección funciona como un **repaso de este tema** (RF-42).
+- **RF-44b** **Errores generales:** **50% preguntas falladas de este tema + 50% falladas de otros temas**. **Si no hay falladas**, funciona como un **repaso general** (RF-43).
+- **RF-45** **Lección final:** incluye **preguntas al azar del tema** que el usuario ya ha hecho.
+- **RF-45b** Las lecciones de **ampliación** (`expansion`) profundizan en contenido ya aprendido con preguntas más difíciles (fuera del alcance inmediato del MVP; base reservada).
 
 ### 3.10 Reutilización de preguntas
 
-- **RF-46** Una `flashcard_question` ligada a una lección puede ser reutilizada por repasos, correcciones, ampliaciones y lecciones finales mediante la relación jerárquica, sin duplicar el contenido.
+- **RF-46** Una pregunta vive **una sola vez** (en su lección normal de origen) y se **recicla** en repasos, errores y finales mediante la jerarquía `Pregunta → Lección → Tema → Etapa → Curso` y el historial de intentos del usuario, **sin duplicar contenido** ni crear preguntas nuevas en esas lecciones.
+
+### 3.11 Pestañas de navegación inferior
+
+- **RF-47** **Cursos:** curso/etapa activos arriba (cambiables si desbloqueados) + catálogo de la etapa (temas y lecciones). Punto de entrada al estudio.
+- **RF-48** **Repasos:** acceso bajo demanda a sesiones de **repaso de tema**, **repaso general**, **errores de tema** y **errores generales** (compuestas según §3.9).
+- **RF-49** **Progresos:** avance del usuario (lecciones completadas, métricas, por tema/etapa/curso).
+- **RF-49b** **Perfil:** datos de cuenta, preferencias y **cambiar de curso**.
+
+### 3.12 Lección a pantalla completa y disposición de controles
+
+- **RF-50** Al **entrar en una lección**, la barra de navegación inferior **se oculta** (modo concentración).
+- **RF-51** Dentro de una lección, **todos los botones se anclan en la parte inferior** de la pantalla (el usuario no tiene que subir el dedo a la parte superior).
+- **RF-52** El **contenido** de las lecciones usa una **fuente algo más grande** y queda **repartido/espaciado** a lo largo de la pantalla (no amontonado arriba).
+- **RF-53** El texto de contenido soporta **negrita con `**…**`** (Markdown): los dobles asteriscos se renderizan en **negrita** dentro de la app.
 
 ---
 
@@ -155,16 +182,16 @@
 
 > Formato: *Como [actor], quiero [acción] para [beneficio].* Cada HU enlaza con RF y se acompaña de criterios de aceptación (CA).
 
-- **HU-01** — *Como estudiante, quiero ver el catálogo de cursos para elegir qué estudiar.* (RF-01)
-  - CA: veo solo cursos publicados con título, icono, color y dificultad; puedo abrir cualquiera.
-- **HU-02** — *Como estudiante, quiero navegar curso → etapa → tema → lecciones para orientarme en el temario.* (RF-02, RF-03, RF-04)
-  - CA: cada nivel muestra sus hijos en orden; cada lección muestra su estado.
-- **HU-03** — *Como estudiante, quiero ver el resumen del tema para tener una visión global.* (RF-05)
-  - CA: el resumen se presenta en varias pantallas navegables.
+- **HU-01** — *Como estudiante, quiero tener un curso ya seleccionado al abrir Cursos para ir directo a estudiar.* (RF-02, RF-03)
+  - CA: la pestaña Cursos muestra mi curso activo y la etapa actual arriba, cambiables si están desbloqueados.
+- **HU-02** — *Como estudiante, quiero ver el catálogo completo de la etapa (temas y lecciones) para orientarme.* (RF-04, RF-05)
+  - CA: cada tema aparece como `[Nombre]` con sus lecciones y estado; al pulsar el tema accedo a su contenido.
+- **HU-03** — *Como estudiante, quiero moverme por Cursos/Repasos/Progresos/Perfil con una barra inferior.* (RF-01, RF-47–RF-49b)
+  - CA: la barra inferior está siempre visible salvo dentro de una lección.
 - **HU-04** — *Como estudiante, quiero estudiar una lección con contenido y ejercicios para aprender de forma activa.* (RF-07, RF-08, RF-09)
-  - CA: primero contenido, luego ejercicios; puedo avanzar uno a uno.
+  - CA: primero contenido, luego ejercicios; puedo avanzar uno a uno; los botones están abajo.
 - **HU-05** — *Como estudiante, quiero autoevaluarme con tarjetas ANKI para fijar conceptos.* (RF-13–RF-18)
-  - CA: revelo el reverso y elijo Incorrecto/Correcto/Muy fácil; "Incorrecto" reencola la tarjeta.
+  - CA: revelo el reverso y elijo Incorrecto/Correcto/Muy fácil (mismo ancho, abajo); los fallos van a la ronda de corrección.
 - **HU-06** — *Como estudiante, quiero responder preguntas test y V/F con explicación para entender mis errores.* (RF-19–RF-23)
   - CA: respuestas desordenadas; tras responder veo si acerté y la explicación.
 - **HU-07** — *Como estudiante, quiero practicar preguntas de examen para prepararme para la certificación.* (RF-24–RF-29)
@@ -183,6 +210,14 @@
   - CA: veo avance por curso/tema, lecciones completadas y tarjetas vencidas/pendientes.
 - **HU-14** — *Como estudiante, quiero que mi progreso sea privado para sentirme seguro.* (RNF-11, RNF-12)
   - CA: no es posible acceder al progreso de otro usuario.
+- **HU-15** — *Como estudiante, quiero corregir mis fallos al terminar la lección para afianzar lo que no sé.* (RF-29a–RF-29e)
+  - CA: tras la pasada principal, si fallé, aparece una pantalla motivacional y repito solo las falladas; al segundo fallo no se repiten, pero quedan registradas.
+- **HU-16** — *Como estudiante, quiero lecciones de repaso/errores (de tema y generales) sin contenido nuevo, reciclando lo ya visto.* (RF-42–RF-45, RF-48)
+  - CA: repasos y errores se componen de mis preguntas ya vistas/falladas; si no hay fallos, los de errores actúan como repaso.
+- **HU-17** — *Como estudiante, quiero concentrarme en la lección sin distracciones.* (RF-50–RF-53)
+  - CA: dentro de la lección no hay barra inferior, los botones están abajo, la fuente es legible y la negrita se ve.
+- **HU-18** — *Como estudiante, quiero cambiar de curso cuando yo quiera.* (RF-06b, RF-49b)
+  - CA: puedo cambiar el curso activo desde Cursos o Perfil; permanece hasta que lo cambie.
 
 ---
 
@@ -211,11 +246,11 @@
 Cada tarjeta mantiene por usuario: `ease_factor`, `interval_days`, `repetitions`, `lapses`, `due_at`, `last_reviewed_at`.
 
 - **RN-13 (Incorrecto):**
-  - La tarjeta se reencola al final de la lección actual.
+  - La pregunta queda marcada para la **ronda de corrección** de la lección (no se reencola de inmediato; ver RF-29a…RF-29e).
   - `lapses += 1`.
   - `ease_factor` disminuye en **0.2**, sin bajar de un mínimo de **1.3** (decidido en Q-03).
   - `interval_days` se reinicia a 0.
-  - Si acumula **3 fallos** (en la misma lección o histórico), se marca como **tarjeta problemática** (decidido en Q-02).
+  - Si acumula **3 fallos** (histórico), se marca como **tarjeta problemática** (decidido en Q-02).
 - **RN-14 (Correcto):**
   - `repetitions += 1`.
   - Intervalo con progresión moderada. Orientativo: 1.ª correcta → 1 día; 2.ª → 3 días; 3.ª → 7 días; siguientes → `interval_days_anterior × ease_factor`.
@@ -225,46 +260,66 @@ Cada tarjeta mantiene por usuario: `ease_factor`, `interval_days`, `repetitions`
   - `ease_factor` aumenta ligeramente.
   - Intervalo crece más rápido. Orientativo: 1.ª → 3 días; 2.ª → 7 días; siguientes → `interval_days_anterior × factor_superior`.
 - **RN-16:** Los parámetros deben ser **ajustables** sin reescribir la lógica. **Valores por defecto (Q-03):** `ease_factor` inicial 2.5, mínimo 1.3; Correcto: pasos iniciales 1/3/7 días y luego `interval × ease_factor`; Muy fácil: pasos 3/7 días, `ease_factor += 0.15` y factor de crecimiento superior; Incorrecto: `interval = 0` y `ease_factor -= 0.2`.
-- **RN-17:** Si el usuario falla repetidamente una tarjeta dentro de una lección, se da por válida para terminar la lección, pero el registro de error/condición problemática se conserva para repasos y correcciones.
+- **RN-17 (Ronda de corrección):** Una lección tiene **una pasada principal** + **una ronda de corrección** de las falladas. En la corrección: acierto → recuperada (acierto, marca correcta ANKI); segundo fallo → no se repite más en esta lección y queda **registrada como incorrecta** para repasos/errores futuros. Así se evita la frustración sin ocultar el fallo.
 
 ### 6.5 Progreso
 - **RN-18** Estados de lección: `locked`, `available`, `in_progress`, `completed`.
 - **RN-19** Al completar una lección se calcula `score_percentage = correct / (correct + incorrect)` y se almacena `completed_at`.
 - **RN-20** Cada intento de pregunta se registra con `was_correct`, `selected_answer`, `attempt_number`, `exercise_type` y `question_source`.
 
+### 6.6 Composición de lecciones (repaso / errores / finales)
+> Ver [ADR 0005](decisions/0005-composicion-dinamica-de-lecciones.md). **Solo `normal` (y examen) tienen preguntas propias**; el resto se compone reciclando.
+- **RN-21** El **pool de reciclaje** de un usuario son las preguntas que **ya ha visto** (con intento registrado), recuperables por la jerarquía `Pregunta → Lección → Tema → Etapa → Curso`.
+- **RN-22** **Repaso de tema** = preguntas ya vistas de **ese tema**. **Repaso general** = 50% del tema actual + 50% de temas anteriores.
+- **RN-23** **Errores de tema** = preguntas de **ese tema** con último intento incorrecto; si no hay, se comporta como **repaso de tema**. **Errores generales** = 50% falladas del tema + 50% falladas de otros temas; si no hay, se comporta como **repaso general**.
+- **RN-24** **Final** = selección **al azar** de preguntas del tema que el usuario ya ha hecho.
+- **RN-25** Una pregunta fallada deja de considerarse "error" cuando se responde correctamente (transición gestionada por el algoritmo ANKI, RN-14).
+- **RN-26** Las "**lecciones de preguntas**" (examen) usan `certdeck_exam_questions`; base preparada, **sin datos por SQL en el MVP** (RF-25).
+
+### 6.7 Navegación y app shell
+- **RN-27** Existe **un curso activo** y una **etapa actual** por usuario, persistentes hasta que el usuario los cambie (RF-02/RF-03). El cambio de etapa/curso se limita a lo **desbloqueado**.
+- **RN-28** La **barra inferior** (Cursos/Repasos/Progresos/Perfil) es persistente **salvo dentro de una lección**, donde se oculta (RF-50).
+
 ---
 
 ## 7. Flujo de navegación
 
 ```txt
-Inicio
- └─ Catálogo de cursos
-     └─ Detalle de curso
-         └─ Etapas del curso
-             └─ Temas de la etapa
-                 └─ Detalle/Resumen de tema  ──(pantallas de resumen)
-                     └─ Lecciones del tema
-                         └─ Lección
-                             ├─ Pantallas de contenido
-                             └─ Ejercicios (ANKI / test / V-F / examen)
-                                 └─ Resultado de lección ──> (desbloqueo) siguiente lección
-
-Accesos transversales:
- - Progreso del usuario
- - Práctica directa de preguntas de examen
+App (barra inferior persistente: Cursos · Repasos · Progresos · Perfil)
+│
+├─ Cursos
+│   ├─ [arriba] Curso activo + Etapa actual (cambiables si desbloqueados)
+│   └─ Catálogo de la etapa:
+│        [Tema 1]  (solo nombre; al pulsar → leer contenido)
+│          ├─ Lección 1 … (estado)
+│          └─ …
+│        [Tema 2] …
+│            └─ Lección  ──► (entra en modo lección: barra inferior OCULTA)
+│                 ├─ Pantallas de contenido (fuente mayor, espaciada, **negrita**)
+│                 ├─ Pasada principal de ejercicios (ANKI / test / V-F)
+│                 ├─ (si hubo fallos) Pantalla motivacional → Ronda de corrección
+│                 └─ Resultado ──► (desbloqueo) siguiente lección
+│
+├─ Repasos  → Repaso de tema · Repaso general · Errores de tema · Errores generales
+├─ Progresos → avance por tema/etapa/curso
+└─ Perfil    → cuenta, preferencias, cambiar de curso
 ```
 
 ---
 
 ## 8. Flujo de aprendizaje (dentro de una lección)
 
+> Al entrar en la lección se **oculta la barra inferior** (RF-50) y **todos los botones quedan abajo** (RF-51). El contenido va con **fuente mayor y espaciado** (RF-52) y **`**negrita**`** renderizada (RF-53).
+
 1. Si la lección tiene pantallas de contenido → mostrarlas en orden, una a una.
-2. Presentar ejercicios en orden.
-3. Por cada ejercicio:
-   - ANKI: mostrar frontal → revelar reverso → Incorrecto/Correcto/Muy fácil → actualizar repaso; si "Incorrecto", reencolar al final.
-   - Test / V-F: mostrar opciones desordenadas → responder → feedback + explicación → registrar intento.
-   - Examen: mostrar opciones desordenadas → responder (única/múltiple) → feedback + `extra_information` → registrar intento.
-4. Al vaciar la cola de ejercicios (incluidas las tarjetas reencoladas) → pantalla de resultado.
+2. **Pasada principal:** presentar los ejercicios en orden, una vez cada uno.
+   - ANKI: frontal → revelar → Incorrecto/Correcto/Muy fácil (mismo ancho, abajo) → actualizar repaso.
+   - Test / V-F: opciones desordenadas → responder → feedback + explicación → registrar intento.
+   - Examen: opciones desordenadas → responder (única/múltiple) → feedback + `extra_information` → registrar intento.
+   - Las falladas se apuntan para la corrección.
+3. **Ronda de corrección:** si hubo fallos → pantalla motivacional → repreguntar solo las falladas.
+   - Acierto → recuperada (acierto). Segundo fallo → no se repite; queda registrada como incorrecta para repasos/errores futuros (RF-29a…e, RN-17).
+4. Pantalla de **resultado** (% aciertos/fallos, felicitación, siguiente).
 5. Calcular y persistir progreso; aplicar desbloqueo y posibles activaciones (corrección por bajo rendimiento).
 
 ---
@@ -300,13 +355,14 @@ Tras completar una lección:
 | `exam_multiple` | Examen respuesta múltiple | `exam` |
 
 ### 10.2 Tipos de lección
-| Código (`lesson_type`) | Propósito |
-|---|---|
-| `normal` | Introduce contenido nuevo + ejercicios |
-| `review` | Repaso espaciado de preguntas previas (cada 2–3 lecciones; generalista por tema) |
-| `error_correction` | Refuerzo de preguntas falladas; activable por bajo rendimiento |
-| `expansion` | Profundiza en contenido ya aprendido; preguntas más difíciles |
-| `final` | Cierre de tema/etapa/curso; repaso amplio + posibles preguntas de examen |
+| Código (`lesson_type`) | Tiene preguntas propias | Propósito / composición |
+|---|---|---|
+| `normal` | **Sí** | Introduce contenido nuevo + sus ejercicios autoría |
+| `review` | No (reciclada) | Repaso de tema (preguntas ya vistas del tema) o general (50% tema + 50% temas previos) — RF-42/43 |
+| `error_correction` | No (reciclada) | Errores de tema o generales; si no hay fallos, actúa como repaso — RF-44/44b |
+| `final` | No (reciclada) | Preguntas al azar del tema ya hecho — RF-45 |
+| `expansion` | No (reservado) | Profundización; base reservada, fuera del MVP inmediato |
+| (examen) | **Sí** (catálogo aparte) | "Lecciones de preguntas": `certdeck_exam_questions`; base preparada, sin datos por SQL en MVP — RF-25 |
 
 ---
 
@@ -378,6 +434,11 @@ Tras completar una lección:
 - **Q-05 ✅** Lógica de desbloqueo/repaso **híbrida**: cálculo optimista en cliente + validación/persistencia autoritativa en Edge Functions + RLS (ver [ADR 0002](decisions/0002-logica-desbloqueo-y-repaso.md)).
 - **Q-06 ✅** La práctica directa de examen **no** altera `user_spaced_repetition` en el MVP (registra intentos); revisable en v3.
 
+**Decisiones de la revisión 1.2.0 (2026-06-15):**
+- **Navegación con barra inferior + curso/etapa activos** (ver [ADR 0004](decisions/0004-modelo-de-navegacion.md)).
+- **Composición dinámica de lecciones de repaso/errores/finales** reciclando preguntas ya vistas; solo `normal`/examen tienen preguntas propias (ver [ADR 0005](decisions/0005-composicion-dinamica-de-lecciones.md)).
+- **Ronda de corrección** en lugar de reencolado inmediato (RF-29a…e, RN-17).
+
 ---
 
 ## 17. Criterios de aceptación de los Requisitos (Fase 2)
@@ -399,3 +460,4 @@ Esta fase se considera **aprobada** cuando el propietario confirma que:
 |---|---|---|
 | 1.0.0 | 2026-06-14 | Versión inicial de Requisitos (Fase 2). Pendiente de aprobación. |
 | 1.1.0 | 2026-06-15 | Integradas las decisiones Q-01…Q-06 (RN-06, RN-07, RN-13, RN-16, §16). Estado: aprobada. |
+| 1.2.0 | 2026-06-15 | Revisión mayor: barra de navegación inferior (Cursos/Repasos/Progresos/Perfil), curso/etapa activos (§3.1, RN-27/28, ADR 0004); tema solo nombre sin resumen (RF-05); ronda de corrección (§3.6bis, RN-17); composición dinámica de repaso/errores/finales reciclando preguntas, solo `normal`/examen con preguntas propias (§3.9, RN-21…26, ADR 0005); lección a pantalla completa con botones abajo, fuente mayor y Markdown negrita (§3.12, RF-50…53). |

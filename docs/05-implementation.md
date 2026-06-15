@@ -158,6 +158,23 @@ Recorrido de aprendizaje funcional de extremo a extremo: catálogo → curso →
 
 ---
 
+## Revisión de alcance 1.2.0 — Documentación actualizada (2026-06-15)
+
+> Solo **documentación** (no código). Recoge la nueva visión de UX/navegación y composición de lecciones antes de seguir implementando.
+
+### Documentos actualizados
+- **Constitución v1.4.0** (§10 UX): barra inferior, curso/etapa activos, controles abajo, fuente mayor/espaciada, Markdown negrita, ronda de corrección.
+- **Requisitos v1.2.0**: §3.1 (navegación + curso activo), §3.6/§3.6bis (examen base + ronda de corrección), §3.9 (composición dinámica), §3.11/§3.12 (pestañas y lección a pantalla completa), RN-21…28, HUs 15–18.
+- **ADR 0004** (modelo de navegación) y **ADR 0005** (composición dinámica de lecciones).
+- **Roadmap** y **Tareas v1.1.0** (§3bis con T-v1-024…034).
+
+### Impacto sobre lo ya implementado (a refactorizar al retomar código)
+- Frontend v1 (`CatalogScreen`, `CourseScreen`, `TopicScreen`, navegación por enlaces) → migrar al modelo de **barra inferior + curso/etapa activos + catálogo de etapa** (ADR 0004).
+- `LessonPlayer` → añadir **ronda de corrección**, **botones abajo/igual ancho**, **fuente mayor** y **Markdown negrita** (RF-29a…e, RF-50…53).
+- **Contenido `20260515_02_aws-saa-c03.sql`** → quitar preguntas autoradas de L4 (review) y L5 (final); esas lecciones se compondrán dinámicamente (ADR 0005). **Pendiente (T-v1-034).**
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |

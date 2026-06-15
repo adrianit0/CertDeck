@@ -3,7 +3,7 @@
 > Fase 4 del Spec Driven Development. Descompone la [Hoja de ruta](03-roadmap.md) en tareas accionables, agrupadas por versión, con tipo, archivos afectados, requisitos cubiertos y checklist por iteración. Se rige por la [Constitución](01-constitution.md), los [Requisitos](02-requirements.md) y los ADR [0001](decisions/0001-estructura-de-carpetas.md)/[0002](decisions/0002-logica-desbloqueo-y-repaso.md).
 
 - **Estado:** Borrador para aprobación (Fase 4)
-- **Versión:** 1.0.0
+- **Versión:** 1.1.0
 - **Fecha:** 2026-06-15
 - **Fase Spec Driven Development:** 4 — Tareas
 - **Depende de:** Fases 1–3 (aprobadas)
@@ -107,6 +107,43 @@
 
 ---
 
+## 3bis. v1 — Revisión UX / navegación / composición (rev. Requisitos 1.2.0)
+
+> Estas tareas **sustituyen/ajustan** parte del frontend ya creado en v1 según ADR 0004/0005. Solo se documentan; la implementación va después de aprobar esta revisión.
+
+### 3bis.1 Navegación y app shell (ADR 0004)
+| ID | Tipo | Tarea | Archivos | Cubre |
+|---|---|---|---|---|
+| T-v1-024 | frontend | Barra de navegación inferior (Cursos/Repasos/Progresos/Perfil) | `app/components/nav/BottomNav.tsx`, layout | RF-01, RF-47…49b |
+| T-v1-025 | frontend | Contexto de **curso/etapa activos** + persistencia (localStorage MVP) | `app/features/active/*` | RF-02/03, RN-27 |
+| T-v1-026 | frontend | Pestaña Cursos: selector curso/etapa arriba + **catálogo de la etapa** (temas `[Nombre]` + lecciones) | `app/features/content/StageCatalog*` | RF-03/04/05 |
+| T-v1-027 | frontend | Quitar resumen del listado de tema; pulsar tema → leer contenido | `app/features/content/*` | RF-05 |
+| T-v1-028 | frontend | Pestañas Repasos y Perfil (estructura) | `app/src/app/reviews`, `app/src/app/profile` | RF-48, RF-49b |
+
+### 3bis.2 Lección a pantalla completa (RF-50…53)
+| ID | Tipo | Tarea | Archivos | Cubre |
+|---|---|---|---|---|
+| T-v1-029 | frontend | Ocultar barra inferior dentro de la lección | layout / LessonScreen | RF-50 |
+| T-v1-030 | frontend | Anclar todos los botones abajo; ANKI con botones de **igual ancho** | `app/features/lesson/*`, `lesson.module.css` | RF-18/51 |
+| T-v1-031 | frontend | Contenido: fuente mayor + espaciado + render de **Markdown negrita** (`**…**`) | `app/lib/markdown.ts` (+test), `LessonPlayer` | RF-52/53 |
+
+### 3bis.3 Ronda de corrección (RF-29a…e, RN-17)
+| ID | Tipo | Tarea | Archivos | Cubre |
+|---|---|---|---|---|
+| T-v1-032 | frontend | Motor de lección con **pasada principal + ronda de corrección** (pantalla motivacional; 2.º fallo no repite y se registra) | `app/features/lesson/engine/*` (+tests), `LessonPlayer` | RF-29a…e |
+
+### 3bis.4 Base de examen
+| ID | Tipo | Tarea | Archivos | Cubre |
+|---|---|---|---|---|
+| T-v1-033 | frontend | Componentes de examen (única/múltiple) y "lecciones de preguntas" (sin datos) | `app/features/lesson/exercises/Exam*` | RF-24…29 |
+
+### 3bis.5 Contenido
+| ID | Tipo | Tarea | Archivos | Cubre |
+|---|---|---|---|---|
+| T-v1-034 | sql | **Revisar** fragmento de contenido: quitar preguntas autoradas de L4 (review) y L5 (final) | `supabase/sql_contenido/20260515_02_aws-saa-c03.sql` | ADR 0005 |
+
+---
+
 ## 4. v2 — Repaso espaciado + correcciones
 
 ### 4.1 SQL
@@ -121,7 +158,7 @@
 | T-v2-003 | frontend | Algoritmo SM-2 simplificado como **función pura** | `app/lib/spaced-repetition/sm2.ts` | RN-13…RN-15 |
 | T-v2-004 | testing | Tests exhaustivos del algoritmo (Incorrecto/Correcto/Muy fácil, límites) | `app/lib/spaced-repetition/__tests__/*` | RNF-09, RN-13…RN-16 |
 | T-v2-005 | backend | `certdeck-spaced-review-update`: aplica y persiste estado de tarjeta (autoritativo) + doc | `supabase/functions/certdeck-spaced-review-update/index.ts` | RN-13…RN-17, ADR 0002 |
-| T-v2-006 | backend | `certdeck-review-build-lesson`: compone repaso desde tarjetas vencidas + jerarquía + generalista por tema | `supabase/functions/certdeck-review-build-lesson/index.ts` | RF-42, RN-06 |
+| T-v2-006 | backend | `certdeck-review-build-lesson`: compone repaso/errores/finales reciclando preguntas ya vistas (tema vs general, errores→repaso si no hay) según ADR 0005 | `supabase/functions/certdeck-review-build-lesson/index.ts` | RF-42…45, RN-21…26 |
 | T-v2-007 | frontend | Resolución de **desbloqueo avanzado** (repaso cada 3, generalista, prerequisitos) | `app/lib/unlock/*` + tests | RF-37…RF-41, RN-04…RN-08 |
 | T-v2-008 | frontend | Lección `review` (UI + integración build/update) | `app/features/lesson/types/review/*` | RF-42 |
 | T-v2-009 | frontend | Lección `error_correction` (activación si score < 60%, prioriza fallos) | `app/features/lesson/types/error-correction/*` | RF-41/43, RN-07 |
@@ -200,3 +237,4 @@ Aprobada cuando el propietario confirma:
 | Versión | Fecha | Cambios |
 |---|---|---|
 | 1.0.0 | 2026-06-15 | Versión inicial de Tareas (Fase 4). Pendiente de aprobación. |
+| 1.1.0 | 2026-06-15 | Añadida §3bis (revisión Requisitos 1.2.0): barra inferior + curso/etapa activos (ADR 0004), lección a pantalla completa (botones abajo, fuente mayor, Markdown negrita), ronda de corrección, base de examen, revisión de contenido; v2 alineada con composición dinámica (ADR 0005). |

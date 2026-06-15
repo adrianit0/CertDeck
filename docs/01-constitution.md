@@ -3,7 +3,7 @@
 > **Documento maestro de gobernanza.** Establece las reglas no negociables del proyecto. Toda fase posterior (requisitos, hoja de ruta, tareas, implementación) y todo el código generado deben respetar este documento. En caso de conflicto entre cualquier artefacto y esta Constitución, **prevalece la Constitución**, salvo que el propietario apruebe explícitamente una excepción documentada en `docs/decisions/`.
 
 - **Estado:** Aprobada
-- **Versión:** 1.3.0
+- **Versión:** 1.4.0
 - **Fecha:** 2026-06-14 · **Aprobada:** 2026-06-14 · **Actualizada:** 2026-06-15
 - **Fase Spec Driven Development:** 1 — Constitución
 - **Aprobación requerida antes de continuar a Fase 2 (Requisitos):** Sí (concedida)
@@ -179,12 +179,15 @@ El agente IA **debe** cumplir obligatoriamente:
 3. **Iconos grandes** y **botones grandes** con área táctil cómoda.
 4. **Contraste suficiente** para legibilidad (objetivo WCAG AA en texto y controles).
 5. Navegación clara y consistente: el usuario siempre sabe dónde está y cuál es la siguiente acción.
-6. **Feedback inmediato** tras responder (correcto/incorrecto + explicación).
-7. Botones de tarjeta ANKI claramente diferenciados: **Incorrecto / Correcto / Muy fácil**.
-8. Respuestas de test y examen **siempre en orden aleatorio**.
-9. Pantallas de resultado motivadoras: porcentaje de aciertos/fallos y felicitación.
-10. Tiempos de carga percibidos mínimos; estados de carga y error siempre visibles.
-11. Soporte de interacción táctil; nada que dependa exclusivamente de hover.
+6. **Barra de navegación inferior** persistente (Cursos / Repasos / Progresos / Perfil), salvo **dentro de una lección**, donde se **oculta** (modo concentración). Ver [ADR 0004](decisions/0004-modelo-de-navegacion.md).
+7. **Curso/etapa activos:** el usuario estudia un curso seleccionado que persiste hasta que lo cambie; el selector superior permite cambiar curso/etapa entre lo desbloqueado.
+8. **Controles abajo:** dentro de una lección, **todos los botones se anclan en la parte inferior** (el usuario no sube el dedo arriba). Botones de igual ancho cuando van en grupo (p. ej. ANKI: Incorrecto / Correcto / Muy fácil, mismo ancho).
+9. **Contenido legible:** en lecciones, **fuente algo mayor** y contenido **repartido/espaciado** (no amontonado arriba). Se soporta **Markdown de negrita** (`**…**` → **negrita**).
+10. **Feedback inmediato** tras responder (correcto/incorrecto + explicación).
+11. Respuestas de test y examen **siempre en orden aleatorio**.
+12. Pantallas de resultado motivadoras: porcentaje de aciertos/fallos y felicitación; **ronda de corrección** de fallos antes del resultado.
+13. Tiempos de carga percibidos mínimos; estados de carga y error siempre visibles.
+14. Soporte de interacción táctil; nada que dependa exclusivamente de hover.
 
 ---
 
@@ -330,3 +333,4 @@ Esta Constitución se considera **aprobada** cuando el propietario confirma que:
 | 1.1.0 | 2026-06-15 | Prefijo obligatorio `certdeck_` en todas las tablas y `certdeck-` en Edge Functions nuevas (§6, §7, §12.2). Motivo: base de datos Supabase compartida con otras apps. |
 | 1.2.0 | 2026-06-15 | Separación de SQL en `supabase/sql/` (estructural) y `supabase/sql_contenido/` (contenido de cursos) (§7, §12.1, §12.2). |
 | 1.3.0 | 2026-06-15 | Nomenclatura de fragmentos de contenido `YYYYMMDD_NN_<slug>.sql` (orden alfabético = orden de ejecución); el contenido de un curso se divide en fragmentos (§7, §12.1, §12.2). |
+| 1.4.0 | 2026-06-15 | Reglas UX revisadas (§10): barra de navegación inferior y curso/etapa activos (ADR 0004); controles abajo y botones de igual ancho en lección; fuente mayor/espaciada y Markdown de negrita; ronda de corrección. |
