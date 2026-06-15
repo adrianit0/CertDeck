@@ -54,3 +54,5 @@ Notas:
 - Si el pool no llega a 4/6, se devuelven las que haya (degradación elegante).
 - Cada tarjeta conserva su `lesson_id` de origen (atribución de errores).
 - La composición de la **pestaña Repasos** (repaso/errores de tema/general) sigue como en este ADR (basada en historial); esta enmienda solo afecta a `review`/`final` del **catálogo**.
+
+> **Transitoria (decisión del propietario 2026-06-16):** esta regla **posicional** es un *stopgap*. En **v2.2** se **reemplaza** por la selección basada en **repetición espaciada (SM-2)**: `review`/`final` se compondrán de **tarjetas vencidas** (`due_at <= now`) según `certdeck_user_spaced_repetition` (ver `app/lib/srs.ts`, v2.1) mediante la Edge Function `certdeck-review-build-lesson`, en lugar de "las 5 lecciones anteriores / el tema".

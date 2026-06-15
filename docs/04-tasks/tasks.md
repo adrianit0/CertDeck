@@ -183,16 +183,16 @@
 ### 4.1 SQL
 | ID | Tipo | Tarea | Archivos | Cubre |
 |---|---|---|---|---|
-| T-v2-001 | sql | `user_spaced_repetition` (`ease_factor`, `interval_days`, `repetitions`, `lapses`, `due_at`, `last_reviewed_at`) + RLS + CHECK (`ease_factor >= 1.3`) + índices (`user_id`, `due_at`) | `supabase/sql/script-004.sql` | RF-33, RN-13…RN-17, RSP-01 |
+| ☑ T-v2-001 | sql | `certdeck_user_spaced_repetition` (`ease_factor`, `interval_days`, `repetitions`, `lapses`, `is_problematic`, `due_at`, `last_reviewed_at`) + RLS + CHECK (`ease_factor >= 1.3`) + índices (`user_id`, `(user_id, due_at)`) | `supabase/sql/script-006.sql` *(el 004 se reutilizó para otra cosa)* | RF-33, RN-13…RN-17, RSP-01 |
 
 ### 4.2 Lógica + Backend
 | ID | Tipo | Tarea | Archivos | Cubre |
 |---|---|---|---|---|
-| T-v2-002 | frontend | Módulo de configuración del algoritmo (parámetros Q-03 centralizados) | `app/lib/spaced-repetition/config.ts` | RN-16 |
-| T-v2-003 | frontend | Algoritmo SM-2 simplificado como **función pura** | `app/lib/spaced-repetition/sm2.ts` | RN-13…RN-15 |
-| T-v2-004 | testing | Tests exhaustivos del algoritmo (Incorrecto/Correcto/Muy fácil, límites) | `app/lib/spaced-repetition/__tests__/*` | RNF-09, RN-13…RN-16 |
+| ☑ T-v2-002 | frontend | Parámetros Q-03 centralizados y **ajustables** (`DEFAULT_SRS_PARAMS`) | `app/lib/srs.ts` | RN-16 |
+| ☑ T-v2-003 | frontend | Algoritmo SM-2 simplificado como **función pura** (`reviewCard`/`initialCardState`/`isCardDue`) | `app/lib/srs.ts` | RN-13…RN-15 |
+| ☑ T-v2-004 | testing | Tests exhaustivos del algoritmo (Incorrecto/Correcto/Muy fácil, límites, problemática) — 12 casos | `app/lib/__tests__/srs.test.ts` | RNF-09, RN-13…RN-16 |
 | T-v2-005 | backend | `certdeck-spaced-review-update`: aplica y persiste estado de tarjeta (autoritativo) + doc | `supabase/functions/certdeck-spaced-review-update/index.ts` | RN-13…RN-17, ADR 0002 |
-| T-v2-006 | backend | `certdeck-review-build-lesson`: compone repaso/errores/finales reciclando preguntas ya vistas (tema vs general, errores→repaso si no hay) según ADR 0005 | `supabase/functions/certdeck-review-build-lesson/index.ts` | RF-42…45, RN-21…26 |
+| T-v2-006 | backend | `certdeck-review-build-lesson`: compone `review`/`final` desde **tarjetas vencidas** (SM-2), **reemplazando** el modo posicional de `certdeck-playable-lesson` (ADR 0005, decisión 2026-06-16) | `supabase/functions/certdeck-review-build-lesson/index.ts` | RF-42…45, RN-21…26 |
 | T-v2-007 | frontend | Resolución de **desbloqueo avanzado** (repaso cada 3, generalista, prerequisitos) | `app/lib/unlock/*` + tests | RF-37…RF-41, RN-04…RN-08 |
 | T-v2-008 | frontend | Lección `review` (UI + integración build/update) | `app/features/lesson/types/review/*` | RF-42 |
 | T-v2-009 | frontend | Lección `error_correction` (activación si score < 60%, prioriza fallos) | `app/features/lesson/types/error-correction/*` | RF-41/43, RN-07 |
@@ -203,11 +203,11 @@
 |---|---|---|---|---|
 | T-v2-011 | docs | Entrada de implementación v2 + instrucciones manuales | `docs/05-implementation/implementation.md` | Const. §11 |
 
-- ☐ `due_at`/`interval_days`/`ease_factor` evolucionan según Q-03 (tests verdes).
+- ☑ `due_at`/`interval_days`/`ease_factor` evolucionan según Q-03 (tests verdes, v2.1).
 - ☐ Repasos cada 3 lecciones + generalista por tema con preguntas vencidas/previas.
 - ☐ Score < 60% activa/ofrece corrección centrada en fallos.
-- ☐ Tarjeta problemática a los 3 fallos.
-- ☐ `script-004.sql` + Edge Functions entregadas con instrucciones.
+- ◐ Tarjeta problemática a los 3 fallos *(en la lógica pura, v2.1; falta cablear UI/persistencia)*.
+- ◐ `script-006.sql` entregado (v2.1); Edge Functions de v2.2 pendientes.
 
 ---
 

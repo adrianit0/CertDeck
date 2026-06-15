@@ -367,6 +367,28 @@ Aplicar el fragmento en el SQL Editor (tras los fragmentos 01/02). El orden alfa
 
 ---
 
+## Iteración v2.1 — Algoritmo de repetición espaciada (2026-06-16)
+
+> Primer paso de **v2** (Roadmap §3): el algoritmo SM-2 simplificado como función pura testeable + la tabla de estado por tarjeta. **Decisión del propietario:** el modo de composición **posicional** de `review`/`final` (regla 2026-06-16) se **reemplazará** por SM-2 (mejor para memorización espaciada) en **v2.2**.
+
+### Enfoque
+- **Lógica pura (RNF-09):** `app/lib/srs.ts` implementa `reviewCard(state, grade)` con los parámetros **Q-03 (RN-16) ajustables** (`DEFAULT_SRS_PARAMS`): ease inicial 2.5 / mín 1.3; Correcto pasos 1/3/7 y luego ×ease; Muy fácil pasos 3/7, +0.15 ease y ×ease×1.3; Incorrecto interval=0, repetitions=0, ease −0.2; **problemática a 3 fallos (Q-02)**. Helpers `initialCardState` e `isCardDue`.
+- **Tests:** `app/lib/__tests__/srs.test.ts` (12 casos: progresiones correcto/fácil, reinicio y suelo de ease en fallo, problemática sticky, vencimiento, parámetros personalizados). Suite total: **29 en verde**.
+- **SQL:** `supabase/sql/script-006.sql` crea `certdeck_user_spaced_repetition` (ease_factor, interval_days, repetitions, lapses, is_problematic, due_at, last_reviewed_at; `unique(user_id, question_id)`; índices por `user_id` y `(user_id, due_at)`; trigger `updated_at`; RLS select/insert/update propias). FK a `certdeck_flashcard_questions` (el examen no alimenta SRS, Q-06).
+
+### Archivos
+- **Nuevos:** `app/lib/srs.ts`, `app/lib/__tests__/srs.test.ts`, `supabase/sql/script-006.sql`.
+
+### Instrucciones manuales para el propietario (Constitución §4)
+- **Aplicar** `supabase/sql/script-006.sql` (idempotente; tras script-001…005). No hay nada que desplegar todavía: las Edge Functions de repaso llegan en v2.2.
+
+### Pendiente (v2.2) — reemplazo del modo posicional por SM-2
+- Edge Function `certdeck-spaced-review-update`: persiste el resultado de cada tarjeta ANKI aplicando `srs.ts` sobre `certdeck_user_spaced_repetition`.
+- Edge Function `certdeck-review-build-lesson`: compone `review`/`final` a partir de **tarjetas vencidas** (`due_at <= now`) + jerarquía, **sustituyendo** la composición posicional de `certdeck-playable-lesson` (ADR 0005, regla 2026-06-16).
+- Wiring en `LessonPlayer` para enviar el grade (fail/correct/easy) de cada tarjeta.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -380,3 +402,4 @@ Aplicar el fragmento en el SQL Editor (tras los fragmentos 01/02). El orden alfa
 | 1.6.0 | 2026-06-15 | Migración de la persistencia del progreso a la BD (ADR 0006): se elimina `localProgress` (localStorage), estado optimista en memoria + write-through, lectura desde `certdeck-progress-get`, banner/bloqueo offline; `script-005.sql` y 3 Edge Functions nuevas + 1 modificada (entregadas, no aplicadas). |
 | 1.7.0 | 2026-06-16 | Composición dinámica de `review`/`final` del catálogo (ADR 0005 enmienda): `certdeck-playable-lesson` recicla ~4 tarjetas de las 5 lecciones anteriores (review) o ~6 del mismo tema (final). Redepliegue manual pendiente. |
 | 1.8.0 | 2026-06-16 | Contenido: tema 2 "S3 Bucket" (slides 19–22), 7 lecciones (4 normales con preguntas + 2 review + 1 final que reciclan). Fragmento `20260616_03_aws-saa-c03.sql` entregado (no aplicado). |
+| 1.9.0 | 2026-06-16 | v2.1: algoritmo SM-2 simplificado puro `app/lib/srs.ts` (Q-03 ajustable) + 12 tests, y `script-006.sql` (`certdeck_user_spaced_repetition` + RLS). El modo posicional se reemplazará por SM-2 en v2.2. |
