@@ -87,6 +87,15 @@ export interface FailedQuestionRef {
   lessonId: string;
 }
 
+/** Autoevaluación de una tarjeta, para el algoritmo de repetición espaciada. */
+export type ReviewGrade = "fail" | "correct" | "easy";
+
+/** Resultado de una tarjeta en la sesión, para actualizar su estado SM-2. */
+export interface CardReview {
+  questionId: string;
+  grade: ReviewGrade;
+}
+
 /**
  * Resultado completo de una sesión del reproductor (lección o repaso).
  * Recoge lo necesario para persistir progreso real y alimentar las métricas.
@@ -101,6 +110,8 @@ export interface SessionResult {
   failedQuestions: FailedQuestionRef[];
   /** Preguntas resueltas correctamente (se retiran del set de errores). */
   passedQuestionIds: string[];
+  /** Autoevaluación por tarjeta para el algoritmo de repetición espaciada (SM-2). */
+  cardReviews: CardReview[];
 }
 
 /**

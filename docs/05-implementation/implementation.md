@@ -389,6 +389,42 @@ Aplicar el fragmento en el SQL Editor (tras los fragmentos 01/02). El orden alfa
 
 ---
 
+## Iteración v2.2 + v2.3 — Repaso espaciado real, composición SM-2 y corrección (2026-06-16)
+
+> Persistencia autoritativa del SM-2, sustitución del modo **posicional** por **repetición espaciada** en la composición de `review`/`final`/`error_correction`, y activación de la corrección de errores (Q-01).
+
+### Backend (Edge Functions, entregadas no desplegadas — §4)
+- **Nueva `certdeck-spaced-review-update`** (POST): recibe un lote `{ question_id, grade }` (fail/correct/easy), lee el estado de cada tarjeta en `certdeck_user_spaced_repetition`, aplica el SM-2 (réplica de `app/lib/srs.ts`, RT-03) y hace upsert; marca `is_problematic` a 3 fallos (Q-02). Única función que **calcula** SM-2.
+- **Modificada `certdeck-playable-lesson`**: la composición de `review`/`final`/`error_correction` deja de ser posicional y pasa a **priorizar tarjetas vencidas** (`due_at <= now`) leyendo `certdeck_user_spaced_repetition` (solo **lee**). Reemplaza el modo posicional (ADR 0005, decisión 2026-06-16):
+  - `review` → hasta 6 cartas de las lecciones **anteriores del tema**, vencidas primero.
+  - `final` → hasta 8 cartas de **todo el tema**.
+  - `error_correction` → hasta 6 cartas con problemas (`lapses>0`/problemática); si no hay, degrada a repaso del tema (RF-44).
+  - Sin historial (primera pasada) ordena al azar → se comporta como antes.
+
+### Frontend
+- `lib/types.ts`: `ReviewGrade` y `CardReview`; `SessionResult.cardReviews`.
+- `LessonPlayer`: `buildSessionResult` deriva el grade por tarjeta (ANKI = autoevaluación; resto = acierto final → correct/fail).
+- `lib/queries/progress.ts`: `submitCardReviews()` → `certdeck-spaced-review-update`.
+- `AppShell`: tras cualquier sesión (lección o repaso) envía los `cardReviews` (write-through, ADR 0006). **Q-01:** si una lección puntúa **< 60%** activa la oferta de corrección.
+- `CoursesTab`: **banner de corrección de errores** (Q-01) que lanza un repaso de errores del tema (reutiliza la maquinaria de "topic-errors").
+
+### Verificación local
+- `typecheck`, `lint`, **29 tests** y `build` export en verde. (Las funciones Deno no entran en el build del frontend.)
+
+### Cobertura del hito v2
+- ✅ El estado SM-2 evoluciona y persiste (algoritmo testeado en v2.1).
+- ✅ `review`/`final` se componen por vencimiento; `error_correction` prioriza fallos.
+- ✅ Tarjeta **problemática** a 3 fallos (server-side, Q-02).
+- ✅ Activación de corrección si score < 60% (Q-01).
+- ◐ **Desbloqueo avanzado** RF-37…41 (repaso cada 3 / generalista): hoy se cubre por **autoría de contenido** (las lecciones review/final ya se colocan en el temario) + desbloqueo lineal; una resolución algorítmica dedicada queda como mejora.
+
+### Instrucciones manuales para el propietario (§4)
+1. Aplicar `supabase/sql/script-006.sql` (si no se hizo en v2.1).
+2. Desplegar: `supabase functions deploy certdeck-spaced-review-update` y **redesplegar** `certdeck-playable-lesson`.
+3. Verificar: estudiar lecciones normales, luego abrir un `review` (prioriza vencidas) y fallar una tarjeta 3 veces (se marca problemática). Una lección con < 60% ofrece "Corregir".
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -403,3 +439,4 @@ Aplicar el fragmento en el SQL Editor (tras los fragmentos 01/02). El orden alfa
 | 1.7.0 | 2026-06-16 | Composición dinámica de `review`/`final` del catálogo (ADR 0005 enmienda): `certdeck-playable-lesson` recicla ~4 tarjetas de las 5 lecciones anteriores (review) o ~6 del mismo tema (final). Redepliegue manual pendiente. |
 | 1.8.0 | 2026-06-16 | Contenido: tema 2 "S3 Bucket" (slides 19–22), 7 lecciones (4 normales con preguntas + 2 review + 1 final que reciclan). Fragmento `20260616_03_aws-saa-c03.sql` entregado (no aplicado). |
 | 1.9.0 | 2026-06-16 | v2.1: algoritmo SM-2 simplificado puro `app/lib/srs.ts` (Q-03 ajustable) + 12 tests, y `script-006.sql` (`certdeck_user_spaced_repetition` + RLS). El modo posicional se reemplazará por SM-2 en v2.2. |
+| 2.0.0 | 2026-06-16 | v2.2+v2.3: `certdeck-spaced-review-update` (persiste SM-2) + `certdeck-playable-lesson` compone por **vencimiento** (review/final/error_correction), reemplazando el modo posicional; wiring de `cardReviews` en LessonPlayer/AppShell; tarjeta problemática (Q-02) y oferta de corrección < 60% (Q-01). |

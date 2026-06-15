@@ -4,20 +4,22 @@
 //
 // Recurso LECCIÓN REPRODUCIBLE: la lección + sus pantallas de teoría + sus
 // preguntas activas (solo lectura). El orden de presentación de las preguntas
-// lo decide el reproductor (aleatorio), no la base de datos. Un recurso = una
-// función; aquí solo GET. RLS (script-001.sql) filtra a lo publicado.
+// lo decide el reproductor (aleatorio), no la base de datos.
 //
-// COMPOSICIÓN DINÁMICA (ADR 0005, regla del propietario 2026-06-16):
-//   - lecciones `normal`         -> sus propias `certdeck_flashcard_questions`.
-//   - lecciones `review`         -> ~4 tarjetas AL AZAR de las 5 lecciones
-//                                   inmediatamente anteriores en el recorrido
-//                                   (puede cruzar al tema anterior).
-//   - lecciones `final`          -> ~6 tarjetas AL AZAR de cualquier lección
-//                                   del MISMO tema.
-// (Estas lecciones ya NO almacenan preguntas propias; se reciclan en runtime.)
+// COMPOSICIÓN DINÁMICA por tipo de lección (ADR 0005 + v2.2, decisión 2026-06-16
+// de usar REPETICIÓN ESPACIADA en lugar del modo posicional):
+//   - `normal`           -> sus propias `certdeck_flashcard_questions`.
+//   - `review`           -> tarjetas del tema (lecciones ANTERIORES a esta),
+//                           priorizando las VENCIDAS (`due_at <= now`) según
+//                           `certdeck_user_spaced_repetition`.
+//   - `final`            -> tarjetas de TODO el tema, misma priorización.
+//   - `error_correction` -> tarjetas del tema con problemas (lapses>0 o
+//                           problemática); si no hay, degrada a repaso del tema.
+// La priorización por vencimiento implementa la lógica de
+// `certdeck-review-build-lesson` (T-v2-006); se integra aquí para evitar un
+// viaje de red extra del cliente.
 //
 // Parámetros (query): `lesson_id` (obligatorio).
-//
 // Función NUEVA y autocontenida (Constitución §4). El agente NO la despliega.
 // =============================================================================
 
@@ -32,15 +34,21 @@ const corsHeaders = {
 const QUESTION_COLUMNS =
   "id, lesson_id, exercise_type, question, correct_answer, incorrect_answer_1, incorrect_answer_2, explanation";
 
-// Parámetros de composición (regla del propietario).
-const REVIEW_SOURCE_LESSONS = 5; // de cuántas lecciones anteriores se recicla
-const REVIEW_CARD_COUNT = 4; // cuántas tarjetas lleva un repaso
-const FINAL_CARD_COUNT = 6; // cuántas tarjetas lleva una evaluación final
+// Cuántas tarjetas lleva cada tipo de lección compuesta.
+const REVIEW_CARD_COUNT = 6;
+const FINAL_CARD_COUNT = 8;
+const ERROR_CARD_COUNT = 6;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Supa = ReturnType<typeof createClient>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = Record<string, any>;
+
+interface SrsInfo {
+  due: number; // epoch ms de due_at
+  lapses: number;
+  problematic: boolean;
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -49,18 +57,33 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-/** Fisher-Yates + recorte: `n` elementos al azar (o todos si hay menos). */
-function pickRandom<T>(items: T[], n: number): T[] {
+/** Fisher-Yates (para desempatar al ordenar y para el fallback sin historial). */
+function shuffle<T>(items: T[]): T[] {
   const arr = items.slice();
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  return arr.slice(0, n);
+  return arr;
 }
 
-/** Preguntas de un conjunto de lecciones. */
-async function questionsOfLessons(supabase: Supa, lessonIds: string[]): Promise<Question[]> {
+/** Ids de las lecciones del mismo tema (opcionalmente solo las anteriores). */
+async function topicLessonIds(
+  supabase: Supa,
+  lesson: Question,
+  onlyBefore: boolean,
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("certdeck_lessons")
+    .select("id, position")
+    .eq("topic_id", lesson.topic_id)
+    .neq("id", lesson.id);
+  return (data ?? [])
+    .filter((l: Question) => !onlyBefore || l.position < lesson.position)
+    .map((l: Question) => l.id as string);
+}
+
+async function flashcardsOfLessons(supabase: Supa, lessonIds: string[]): Promise<Question[]> {
   if (lessonIds.length === 0) return [];
   const { data } = await supabase
     .from("certdeck_flashcard_questions")
@@ -69,78 +92,69 @@ async function questionsOfLessons(supabase: Supa, lessonIds: string[]): Promise<
   return data ?? [];
 }
 
-/** FINAL: ~6 tarjetas al azar de cualquier lección del mismo tema. */
-async function composeFinal(supabase: Supa, lesson: Question): Promise<Question[]> {
-  const { data: siblings } = await supabase
-    .from("certdeck_lessons")
-    .select("id")
-    .eq("topic_id", lesson.topic_id)
-    .neq("id", lesson.id);
-  const ids = (siblings ?? []).map((l: Question) => l.id as string);
-  return pickRandom(await questionsOfLessons(supabase, ids), FINAL_CARD_COUNT);
+/** Estado SRS del usuario para un conjunto de preguntas. */
+async function srsFor(
+  supabase: Supa,
+  userId: string,
+  questionIds: string[],
+): Promise<Map<string, SrsInfo>> {
+  const map = new Map<string, SrsInfo>();
+  if (questionIds.length === 0) return map;
+  const { data } = await supabase
+    .from("certdeck_user_spaced_repetition")
+    .select("question_id, due_at, lapses, is_problematic")
+    .eq("user_id", userId)
+    .in("question_id", questionIds);
+  for (const r of data ?? []) {
+    map.set(r.question_id as string, {
+      due: new Date(r.due_at).getTime(),
+      lapses: r.lapses ?? 0,
+      problematic: Boolean(r.is_problematic),
+    });
+  }
+  return map;
 }
 
 /**
- * REVIEW: ~4 tarjetas al azar de las 5 lecciones inmediatamente anteriores en el
- * recorrido del curso (orden etapa.position → tema.position → lección.position),
- * pudiendo cruzar al tema anterior.
+ * Ordena por prioridad de repaso: vistas y más vencidas primero (due_at asc);
+ * las nunca vistas al final (con desempate aleatorio). Devuelve `count` cartas.
  */
-async function composeReview(supabase: Supa, lesson: Question): Promise<Question[]> {
-  const { data: topic } = await supabase
-    .from("certdeck_topics")
-    .select("id, stage_id, position")
-    .eq("id", lesson.topic_id)
-    .maybeSingle();
-  if (!topic) return [];
+function rankByDue(cards: Question[], srs: Map<string, SrsInfo>, count: number): Question[] {
+  return shuffle(cards)
+    .sort((a, b) => {
+      const ka = srs.get(a.id)?.due ?? Number.MAX_SAFE_INTEGER;
+      const kb = srs.get(b.id)?.due ?? Number.MAX_SAFE_INTEGER;
+      return ka - kb;
+    })
+    .slice(0, count);
+}
 
-  const { data: stage } = await supabase
-    .from("certdeck_stages")
-    .select("id, course_id, position")
-    .eq("id", topic.stage_id)
-    .maybeSingle();
-  if (!stage) return [];
+async function composeReview(supabase: Supa, userId: string, lesson: Question): Promise<Question[]> {
+  const lessonIds = await topicLessonIds(supabase, lesson, /* onlyBefore */ true);
+  const cards = await flashcardsOfLessons(supabase, lessonIds);
+  const srs = await srsFor(supabase, userId, cards.map((c) => c.id as string));
+  return rankByDue(cards, srs, REVIEW_CARD_COUNT);
+}
 
-  // Jerarquía del curso para construir el orden global de lecciones.
-  const { data: stages } = await supabase
-    .from("certdeck_stages")
-    .select("id, position")
-    .eq("course_id", stage.course_id);
-  const stagePos = new Map(
-    (stages ?? []).map((s: Question): [string, number] => [s.id, s.position]),
-  );
-  const stageIds = (stages ?? []).map((s: Question) => s.id as string);
+async function composeFinal(supabase: Supa, userId: string, lesson: Question): Promise<Question[]> {
+  const lessonIds = await topicLessonIds(supabase, lesson, /* onlyBefore */ false);
+  const cards = await flashcardsOfLessons(supabase, lessonIds);
+  const srs = await srsFor(supabase, userId, cards.map((c) => c.id as string));
+  return rankByDue(cards, srs, FINAL_CARD_COUNT);
+}
 
-  const { data: topics } = await supabase
-    .from("certdeck_topics")
-    .select("id, stage_id, position")
-    .in("stage_id", stageIds);
-  const topicMeta = new Map(
-    (topics ?? []).map((t: Question): [string, Question] => [t.id, t]),
-  );
-  const topicIds = (topics ?? []).map((t: Question) => t.id as string);
-
-  const { data: allLessons } = await supabase
-    .from("certdeck_lessons")
-    .select("id, topic_id, position")
-    .in("topic_id", topicIds);
-
-  const ordered = (allLessons ?? []).slice().sort((a: Question, b: Question) => {
-    const ta = topicMeta.get(a.topic_id);
-    const tb = topicMeta.get(b.topic_id);
-    const sa = stagePos.get(ta?.stage_id) ?? 0;
-    const sb = stagePos.get(tb?.stage_id) ?? 0;
-    if (sa !== sb) return sa - sb;
-    if ((ta?.position ?? 0) !== (tb?.position ?? 0)) return (ta?.position ?? 0) - (tb?.position ?? 0);
-    return (a.position ?? 0) - (b.position ?? 0);
+async function composeErrors(supabase: Supa, userId: string, lesson: Question): Promise<Question[]> {
+  const lessonIds = await topicLessonIds(supabase, lesson, /* onlyBefore */ false);
+  const cards = await flashcardsOfLessons(supabase, lessonIds);
+  const srs = await srsFor(supabase, userId, cards.map((c) => c.id as string));
+  // Solo tarjetas con problemas (algún fallo o marcadas problemáticas).
+  const failing = cards.filter((c) => {
+    const s = srs.get(c.id as string);
+    return s && (s.lapses > 0 || s.problematic);
   });
-
-  const idx = ordered.findIndex((l: Question) => l.id === lesson.id);
-  if (idx <= 0) return [];
-  const precedingIds = ordered
-    .slice(Math.max(0, idx - REVIEW_SOURCE_LESSONS), idx)
-    .map((l: Question) => l.id as string);
-
-  return pickRandom(await questionsOfLessons(supabase, precedingIds), REVIEW_CARD_COUNT);
+  // RF-44: si no hay falladas, funciona como un repaso del tema.
+  if (failing.length === 0) return rankByDue(cards, srs, REVIEW_CARD_COUNT);
+  return rankByDue(failing, srs, ERROR_CARD_COUNT);
 }
 
 Deno.serve(async (req: Request) => {
@@ -161,6 +175,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) return json({ error: "unauthorized" }, 401);
+  const userId = userData.user.id;
 
   const { data: lesson, error: lessonError } = await supabase
     .from("certdeck_lessons")
@@ -177,12 +192,14 @@ Deno.serve(async (req: Request) => {
     .order("position", { ascending: true });
   if (screensError) return json({ error: "query_failed", detail: screensError.message }, 500);
 
-  // Preguntas: propias (normal) o compuestas en runtime (review/final).
+  // Preguntas: propias (normal) o compuestas por repetición espaciada.
   let questions: Question[];
   if (lesson.lesson_type === "final") {
-    questions = await composeFinal(supabase, lesson);
+    questions = await composeFinal(supabase, userId, lesson);
   } else if (lesson.lesson_type === "review") {
-    questions = await composeReview(supabase, lesson);
+    questions = await composeReview(supabase, userId, lesson);
+  } else if (lesson.lesson_type === "error_correction") {
+    questions = await composeErrors(supabase, userId, lesson);
   } else {
     const { data, error } = await supabase
       .from("certdeck_flashcard_questions")

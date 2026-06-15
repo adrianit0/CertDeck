@@ -4,12 +4,15 @@ Lección reproducible: la lección + sus pantallas de teoría + sus preguntas ac
 
 > **Función NUEVA y autocontenida** (Constitución §4). El agente no la despliega.
 
-## Composición de preguntas por tipo de lección (ADR 0005, regla 2026-06-16)
+## Composición de preguntas por tipo de lección (ADR 0005 + v2.2, repetición espaciada)
 - **`normal`** → sus propias `certdeck_flashcard_questions`.
-- **`review`** → ~**4** tarjetas al azar de las **5 lecciones inmediatamente anteriores** en el recorrido del curso (orden `etapa.position → tema.position → lección.position`); puede **cruzar al tema anterior**.
-- **`final`** → ~**6** tarjetas al azar de **cualquier lección del mismo tema**.
+- **`review`** → hasta **6** tarjetas de las **lecciones anteriores del mismo tema**, priorizando las **vencidas** (`due_at <= now`) según `certdeck_user_spaced_repetition`.
+- **`final`** → hasta **8** tarjetas de **todo el tema**, misma priorización por vencimiento.
+- **`error_correction`** → hasta **6** tarjetas del tema con **problemas** (`lapses > 0` o problemática); si no hay falladas, degrada a **repaso del tema** (RF-44).
 
-Las lecciones `review`/`final` **no almacenan preguntas propias**: se reciclan en tiempo de ejecución. Si no hay tarjetas suficientes en el pool, se devuelven las que haya. Cada pregunta conserva su `lesson_id` de origen (útil para el seguimiento de errores).
+**Priorización (SM-2):** se ordenan las tarjetas por `due_at` ascendente (las vistas y más vencidas primero) y las nunca vistas al final (con desempate aleatorio). Así, en una primera pasada sin historial se comporta como selección aleatoria, y con uso real prioriza lo que toca repasar.
+
+Las lecciones `review`/`final`/`error_correction` **no almacenan preguntas propias**: se reciclan en runtime. Cada pregunta conserva su `lesson_id` de origen. Reemplaza al modo **posicional** anterior (decisión del propietario 2026-06-16).
 
 ## Variables de entorno (inyectadas por la plataforma)
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY` · usa el JWT del usuario (RLS).

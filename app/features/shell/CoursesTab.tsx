@@ -30,6 +30,10 @@ interface CoursesTabProps {
   setActiveCourseId: (id: string) => void;
   setActiveStageId: (id: string) => void;
   onStartLesson: (lessonId: string) => void;
+  /** Q-01: la última lección puntuó < 60% y se ofrece corregir errores. */
+  offerCorrection: boolean;
+  onStartCorrection: () => void;
+  onDismissCorrection: () => void;
 }
 
 export default function CoursesTab({
@@ -42,6 +46,9 @@ export default function CoursesTab({
   setActiveCourseId,
   setActiveStageId,
   onStartLesson,
+  offerCorrection,
+  onStartCorrection,
+  onDismissCorrection,
 }: CoursesTabProps) {
   const [selectorOpen, setSelectorOpen] = useState(false);
   // Tema cuya sinopsis completa se está leyendo (al pulsar su tarjeta).
@@ -181,6 +188,33 @@ export default function CoursesTab({
           <Zap className="w-6 h-6 text-yellow-300 fill-yellow-300" />
         </div>
       </div>
+
+      {/* Oferta de corrección de errores (Q-01: última lección < 60%) */}
+      {offerCorrection && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-slate-800 leading-tight">Has fallado varias preguntas</p>
+            <p className="text-xs text-slate-500 mt-0.5">Repasa los errores de este tema para afianzarlos.</p>
+          </div>
+          <button
+            id="btn-start-correction"
+            onClick={onStartCorrection}
+            className="shrink-0 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all px-3.5 py-2 rounded-xl"
+          >
+            Corregir
+          </button>
+          <button
+            onClick={onDismissCorrection}
+            aria-label="Descartar"
+            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+          >
+            <X className="w-4 h-4 stroke-[2.5]" />
+          </button>
+        </div>
+      )}
 
       {/* Contenido completo de la etapa (todo desplegado, sin acordeones) */}
       {filteredTopics.length === 0 ? (

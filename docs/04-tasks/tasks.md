@@ -191,23 +191,23 @@
 | ☑ T-v2-002 | frontend | Parámetros Q-03 centralizados y **ajustables** (`DEFAULT_SRS_PARAMS`) | `app/lib/srs.ts` | RN-16 |
 | ☑ T-v2-003 | frontend | Algoritmo SM-2 simplificado como **función pura** (`reviewCard`/`initialCardState`/`isCardDue`) | `app/lib/srs.ts` | RN-13…RN-15 |
 | ☑ T-v2-004 | testing | Tests exhaustivos del algoritmo (Incorrecto/Correcto/Muy fácil, límites, problemática) — 12 casos | `app/lib/__tests__/srs.test.ts` | RNF-09, RN-13…RN-16 |
-| T-v2-005 | backend | `certdeck-spaced-review-update`: aplica y persiste estado de tarjeta (autoritativo) + doc | `supabase/functions/certdeck-spaced-review-update/index.ts` | RN-13…RN-17, ADR 0002 |
-| T-v2-006 | backend | `certdeck-review-build-lesson`: compone `review`/`final` desde **tarjetas vencidas** (SM-2), **reemplazando** el modo posicional de `certdeck-playable-lesson` (ADR 0005, decisión 2026-06-16) | `supabase/functions/certdeck-review-build-lesson/index.ts` | RF-42…45, RN-21…26 |
-| T-v2-007 | frontend | Resolución de **desbloqueo avanzado** (repaso cada 3, generalista, prerequisitos) | `app/lib/unlock/*` + tests | RF-37…RF-41, RN-04…RN-08 |
-| T-v2-008 | frontend | Lección `review` (UI + integración build/update) | `app/features/lesson/types/review/*` | RF-42 |
-| T-v2-009 | frontend | Lección `error_correction` (activación si score < 60%, prioriza fallos) | `app/features/lesson/types/error-correction/*` | RF-41/43, RN-07 |
-| T-v2-010 | frontend | Marcado de **tarjeta problemática** a 3 fallos | `app/lib/spaced-repetition/*` | RN-13/17, Q-02 |
+| ☑ T-v2-005 | backend | `certdeck-spaced-review-update`: aplica y persiste estado de tarjeta (autoritativo) + doc | `supabase/functions/certdeck-spaced-review-update/index.ts` | RN-13…RN-17, ADR 0002 |
+| ☑ T-v2-006 | backend | Composición de `review`/`final`/`error_correction` desde **tarjetas vencidas** (SM-2), **reemplazando** el modo posicional. *Integrada en `certdeck-playable-lesson`* (sin endpoint aparte, para evitar un viaje de red) | `supabase/functions/certdeck-playable-lesson/index.ts` | RF-42…45, RN-21…26 |
+| ◐ T-v2-007 | frontend | **Desbloqueo avanzado** (repaso cada 3, generalista): hoy cubierto por autoría de contenido + desbloqueo lineal; resolución algorítmica dedicada pendiente | `app/lib/unlock/*` + tests | RF-37…RF-41, RN-04…RN-08 |
+| ☑ T-v2-008 | frontend | Lección `review` (cableado build/update vía `getPlayableLesson` + `submitCardReviews`) | `app/features/shell/LessonPlayer.tsx`, `AppShell.tsx` | RF-42 |
+| ☑ T-v2-009 | frontend | `error_correction`: oferta si score < 60% (banner que lanza repaso de errores) + composición que prioriza fallos | `app/features/shell/{AppShell,CoursesTab}.tsx` | RF-41/43, RN-07 |
+| ☑ T-v2-010 | backend | Marcado de **tarjeta problemática** a 3 fallos (persistido en `is_problematic`) | `app/lib/srs.ts`, `certdeck-spaced-review-update` | RN-13/17, Q-02 |
 
 ### 4.3 Docs / Checklist v2
 | ID | Tipo | Tarea | Archivos | Cubre |
 |---|---|---|---|---|
 | T-v2-011 | docs | Entrada de implementación v2 + instrucciones manuales | `docs/05-implementation/implementation.md` | Const. §11 |
 
-- ☑ `due_at`/`interval_days`/`ease_factor` evolucionan según Q-03 (tests verdes, v2.1).
-- ☐ Repasos cada 3 lecciones + generalista por tema con preguntas vencidas/previas.
-- ☐ Score < 60% activa/ofrece corrección centrada en fallos.
-- ◐ Tarjeta problemática a los 3 fallos *(en la lógica pura, v2.1; falta cablear UI/persistencia)*.
-- ◐ `script-006.sql` entregado (v2.1); Edge Functions de v2.2 pendientes.
+- ☑ `due_at`/`interval_days`/`ease_factor` evolucionan según Q-03 (tests verdes, v2.1) y se **persisten** (v2.2).
+- ☑ Repasos/finales con preguntas **vencidas/previas** (composición SM-2 en `certdeck-playable-lesson`). *(La cadencia "cada 3 lecciones" se autora en el contenido.)*
+- ☑ Score < 60% ofrece corrección centrada en fallos (Q-01).
+- ☑ Tarjeta problemática a los 3 fallos (persistida en `is_problematic`).
+- ☑ `script-006.sql` + Edge Functions (`certdeck-spaced-review-update`, `certdeck-playable-lesson`) entregadas con instrucciones.
 
 ---
 

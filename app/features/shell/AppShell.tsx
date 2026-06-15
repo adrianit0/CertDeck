@@ -22,6 +22,7 @@ import {
   completeLesson,
   recordReview,
   resetProgress,
+  submitCardReviews,
   type ReviewType,
 } from "@/lib/queries/progress";
 import { logout } from "@/lib/auth/login";
@@ -85,6 +86,8 @@ export default function AppShell() {
   const [activeTab, setActiveTab] = useState("cursos");
 
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
+  // Oferta de corrección de errores tras una lección floja (Q-01, score < 60%).
+  const [offerCorrection, setOfferCorrection] = useState(false);
   const [isReviewSession, setIsReviewSession] = useState(false);
   const [reviewType, setReviewType] = useState("");
   const [reviewQuestions, setReviewQuestions] = useState<FlashcardQuestion[]>([]);
@@ -258,7 +261,12 @@ export default function AppShell() {
         const lessonId = currentLessonId;
         setProgress((prev) => applyLessonCompleted(prev, lessonId, result));
         void completeLesson(lessonId, result).catch(() => setConnectionLost(true));
+        // Q-01 (RN-07): si el rendimiento es bajo, ofrecer corregir errores.
+        setOfferCorrection(result.scorePercentage < 60);
       }
+      // Actualiza la repetición espaciada (SM-2) de las tarjetas revisadas, en
+      // lecciones y repasos por igual (v2.2).
+      void submitCardReviews(result.cardReviews).catch(() => setConnectionLost(true));
     }
 
     setCurrentLessonId(null);
@@ -316,6 +324,12 @@ export default function AppShell() {
             setActiveCourseId={setActiveCourseId}
             setActiveStageId={setActiveStageId}
             onStartLesson={handleStartLesson}
+            offerCorrection={offerCorrection}
+            onStartCorrection={() => {
+              setOfferCorrection(false);
+              void handleStartReview("topic-errors");
+            }}
+            onDismissCorrection={() => setOfferCorrection(false)}
           />
         )}
 

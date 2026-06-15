@@ -2,7 +2,7 @@
 
 import { invokeEdge } from "@/lib/edge/invoke";
 import { normalize, type ProgressState } from "@/lib/progress/progressState";
-import type { SessionResult } from "@/lib/types";
+import type { CardReview, SessionResult } from "@/lib/types";
 
 /**
  * Persistencia del PROGRESO contra la base de datos (ADR 0006).
@@ -55,4 +55,16 @@ export async function recordReview(reviewType: ReviewType, result: SessionResult
 /** Borra todo el progreso del usuario en la BD. */
 export async function resetProgress(): Promise<void> {
   await invokeEdge("certdeck-progress-reset", { method: "POST" });
+}
+
+/**
+ * Actualiza el estado de repetición espaciada (SM-2) de las tarjetas revisadas.
+ * Autoritativo: el servidor recalcula intervalo/ease/due (ver Edge Function).
+ */
+export async function submitCardReviews(reviews: CardReview[]): Promise<void> {
+  if (reviews.length === 0) return;
+  await invokeEdge("certdeck-spaced-review-update", {
+    method: "POST",
+    body: { reviews: reviews.map((r) => ({ question_id: r.questionId, grade: r.grade })) },
+  });
 }

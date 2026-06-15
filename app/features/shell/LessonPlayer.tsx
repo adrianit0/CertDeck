@@ -323,6 +323,20 @@ export default function LessonPlayer({
       .filter((q) => !answersLog[q.id]?.finalCorrect)
       .map((q) => ({ id: q.id, lessonId: q.lesson_id })),
     passedQuestionIds: questions.filter((q) => answersLog[q.id]?.finalCorrect).map((q) => q.id),
+    // Grade por tarjeta para SM-2: en ANKI se usa la autoevaluación; en el resto
+    // de tipos se deriva del acierto final (correcto/fallo).
+    cardReviews: questions
+      .filter((q) => answersLog[q.id])
+      .map((q) => {
+        const log = answersLog[q.id]!;
+        const grade =
+          q.exercise_type === "anki_card"
+            ? (log.ankiDifficulty ?? (log.finalCorrect ? "correct" : "fail"))
+            : log.finalCorrect
+              ? "correct"
+              : "fail";
+        return { questionId: q.id, grade };
+      }),
   });
 
   const renderTextInputBlanks = () => {
