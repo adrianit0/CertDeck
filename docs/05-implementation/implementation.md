@@ -319,6 +319,32 @@ La escritura `completeLesson` ya pasaba por `certdeck-progress-complete-lesson` 
 
 ---
 
+## Composición de lecciones `review`/`final` del catálogo (2026-06-16) — ADR 0005 (enmienda)
+
+> Las lecciones de tipo `review` y `final` dejan de llevar preguntas propias y **reciclan tarjetas** de otras lecciones según una regla posicional fijada por el propietario.
+
+### Enfoque
+- Implementado en la Edge Function **`certdeck-playable-lesson`** (autoritativa, con acceso a la jerarquía y posiciones):
+  - **`review`** → ~4 tarjetas al azar de las **5 lecciones anteriores** en el orden global del curso (`etapa.position → tema.position → lección.position`), pudiendo cruzar al tema anterior.
+  - **`final`** → ~6 tarjetas al azar de **cualquier lección del mismo tema**.
+  - **`normal`** → sin cambios (sus propias preguntas).
+- El reproductor (`LessonPlayer`) no cambia: consume `data.questions` igual que antes; estas lecciones del catálogo se completan como normales (desbloquean la siguiente).
+- Degradación elegante si el pool no alcanza 4/6. Cada tarjeta conserva su `lesson_id` de origen.
+
+### Archivos
+- **Modificado:** `supabase/functions/certdeck-playable-lesson/index.ts` (+`composeReview`/`composeFinal`/`pickRandom`) y su `README.md`.
+- **Docs:** ADR 0005 (enmienda 2026-06-16).
+
+### Instrucciones manuales para el propietario (Constitución §4)
+1. **Quitar** las preguntas autoradas de las lecciones `review`/`final` del contenido (no deben llevar `INSERT` de `certdeck_flashcard_questions`).
+2. **Redesplegar** la función: `supabase functions deploy certdeck-playable-lesson`.
+3. Verificar: abrir una lección `review` (muestra ~4 tarjetas de lecciones previas) y una `final` (~6 del tema).
+
+### Validación local
+- `typecheck`, `lint` y los **17 tests** del frontend en verde (la función Deno no entra en el build del frontend; cambio aislado en `supabase/`).
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -330,3 +356,4 @@ La escritura `completeLesson` ya pasaba por `certdeck-progress-complete-lesson` 
 | 1.4.0 | 2026-06-15 | Login con persistencia de sesión vía Edge Function `auth-login` (`lib/auth/login`, `LoginScreen`, `AuthGate`) + cerrar sesión en Perfil. |
 | 1.5.0 | 2026-06-15 | Modo oscuro conmutable y persistente (clase `.dark` + remapeo de variables de tema Tailwind v4; `lib/theme`, `useTheme`, script anti-parpadeo). |
 | 1.6.0 | 2026-06-15 | Migración de la persistencia del progreso a la BD (ADR 0006): se elimina `localProgress` (localStorage), estado optimista en memoria + write-through, lectura desde `certdeck-progress-get`, banner/bloqueo offline; `script-005.sql` y 3 Edge Functions nuevas + 1 modificada (entregadas, no aplicadas). |
+| 1.7.0 | 2026-06-16 | Composición dinámica de `review`/`final` del catálogo (ADR 0005 enmienda): `certdeck-playable-lesson` recicla ~4 tarjetas de las 5 lecciones anteriores (review) o ~6 del mismo tema (final). Redepliegue manual pendiente. |

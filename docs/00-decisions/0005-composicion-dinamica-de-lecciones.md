@@ -41,3 +41,16 @@ Autoría inicial: cada lección (incluidas repaso/errores/final) llevaba **pregu
 - `normal` → `certdeck_flashcard_questions` propias (como hasta ahora).
 - `review`/`error_correction`/`final` → sin filas en `certdeck_flashcard_questions`; se resuelven al abrir la lección.
 - Distinción tema vs general: el **scope** ("tema"/"general") lo aporta el contexto de la sesión (catálogo de tema vs pestaña Repasos), no necesariamente un nuevo `lesson_type`.
+
+## Enmienda 2026-06-16 — Regla concreta para lecciones `review`/`final` del catálogo
+
+Para las **lecciones del catálogo** (las que se abren desde un tema, no la pestaña Repasos), el propietario fija una regla **posicional** (no basada en el historial del usuario), implementada en la Edge Function `certdeck-playable-lesson`:
+
+- **`review`** → ~**4** tarjetas **al azar** de las **5 lecciones inmediatamente anteriores** en el recorrido del curso, ordenado por `etapa.position → tema.position → lección.position`. Puede **cruzar al tema anterior**.
+- **`final`** → ~**6** tarjetas **al azar** de **cualquier lección del mismo tema**.
+
+Notas:
+- Estas lecciones **no almacenan preguntas propias**; el propietario retira las que existieran y aplica esta regla en adelante.
+- Si el pool no llega a 4/6, se devuelven las que haya (degradación elegante).
+- Cada tarjeta conserva su `lesson_id` de origen (atribución de errores).
+- La composición de la **pestaña Repasos** (repaso/errores de tema/general) sigue como en este ADR (basada en historial); esta enmienda solo afecta a `review`/`final` del **catálogo**.
