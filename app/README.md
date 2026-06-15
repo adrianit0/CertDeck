@@ -3,7 +3,7 @@
 Aplicación **mobile-first** de estudio de certificaciones con repaso espaciado.
 Stack: **React + Next.js (App Router) + Capacitor**, TypeScript estricto.
 
-> Estrategia de renderizado: **static export (SPA)** — ver `docs/decisions/0003-render-strategy.md`.
+> Estrategia de renderizado: **static export (SPA)** — ver `docs/00-decisions/0003-render-strategy.md`.
 
 ## Requisitos
 

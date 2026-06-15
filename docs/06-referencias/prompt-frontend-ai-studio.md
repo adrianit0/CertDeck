@@ -1,8 +1,8 @@
 # CertDeck — Prompt para generar el frontend con Google AI Studio
 
 > Prompt maestro para construir el **frontend completo (prototipo navegable, mobile-first)** de CertDeck
-> en Google AI Studio. Está derivado de la [Constitución](01-constitution.md), los
-> [Requisitos](02-requirements.md) y el [Catálogo de tipos de ejercicio](06-tipos-de-ejercicio.md).
+> en Google AI Studio. Está derivado de la [Constitución](../01-constitution/constitution.md), los
+> [Requisitos](../02-requirements/requirements.md) y el [Catálogo de tipos de ejercicio](tipos-de-ejercicio.md).
 >
 > **Estado:** Referencia · **Fecha:** 2026-06-15
 >

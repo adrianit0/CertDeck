@@ -1,6 +1,6 @@
 # CertDeck — Tareas
 
-> Fase 4 del Spec Driven Development. Descompone la [Hoja de ruta](03-roadmap.md) en tareas accionables, agrupadas por versión, con tipo, archivos afectados, requisitos cubiertos y checklist por iteración. Se rige por la [Constitución](01-constitution.md), los [Requisitos](02-requirements.md) y los ADR [0001](decisions/0001-estructura-de-carpetas.md)/[0002](decisions/0002-logica-desbloqueo-y-repaso.md).
+> Fase 4 del Spec Driven Development. Descompone la [Hoja de ruta](../03-roadmap/roadmap.md) en tareas accionables, agrupadas por versión, con tipo, archivos afectados, requisitos cubiertos y checklist por iteración. Se rige por la [Constitución](../01-constitution/constitution.md), los [Requisitos](../02-requirements/requirements.md) y los ADR [0001](../00-decisions/0001-estructura-de-carpetas.md)/[0002](../00-decisions/0002-logica-desbloqueo-y-repaso.md).
 
 - **Estado:** Borrador para aprobación (Fase 4)
 - **Versión:** 1.1.0
@@ -26,7 +26,7 @@
 ### 2.1 Frontend / Infra
 | ID | Tipo | Tarea | Archivos | Cubre |
 |---|---|---|---|---|
-| T-v0-001 | docs | ADR 0003: estrategia de renderizado Next.js + Capacitor (SSR vs export estático/SPA) | `docs/decisions/0003-render-strategy.md` | RT-01 |
+| T-v0-001 | docs | ADR 0003: estrategia de renderizado Next.js + Capacitor (SSR vs export estático/SPA) | `docs/00-decisions/0003-render-strategy.md` | RT-01 |
 | T-v0-002 | infra | Scaffold Next.js + TypeScript estricto, estructura por features | `app/package.json`, `app/tsconfig.json`, `app/next.config.*`, `app/src/`, `app/components/`, `app/features/`, `app/lib/`, `app/hooks/`, `app/styles/` | Const. §8 |
 | T-v0-003 | infra | Configuración base de Capacitor | `app/capacitor.config.ts` | RM-03 |
 | T-v0-004 | infra | Lint + formato + scripts (`dev`, `build`, `test`, `lint`) | `app/.eslintrc*`, `app/.prettierrc*`, `app/package.json` | RNF-08 |
@@ -40,7 +40,7 @@
 | ID | Tipo | Tarea | Archivos | Cubre |
 |---|---|---|---|---|
 | T-v0-010 | sql | Esquema de **contenido**: `courses`, `stages`, `topics`, `lessons`, `lesson_screens` (PK, FK, `position`, `is_published`, `created_at`/`updated_at`, índices, CHECK de `lesson_type`) | `supabase/sql/script-001.sql` | RF-01…RF-12, RN-01…RN-03 |
-| T-v0-011 | docs | Instrucciones de revisión/aplicación manual de `script-001.sql` | `docs/05-implementation.md` | Const. §7 |
+| T-v0-011 | docs | Instrucciones de revisión/aplicación manual de `script-001.sql` | `docs/05-implementation/implementation.md` | Const. §7 |
 
 ### 2.3 Checklist v0
 - ☐ ADR 0003 decidido antes de construir pantallas.
@@ -94,7 +94,7 @@
 ### 3.5 Docs v1
 | ID | Tipo | Tarea | Archivos | Cubre |
 |---|---|---|---|---|
-| T-v1-023 | docs | Entrada de implementación v1 + instrucciones manuales (SQL + deploy Edge Function + env) | `docs/05-implementation.md` | Const. §11 |
+| T-v1-023 | docs | Entrada de implementación v1 + instrucciones manuales (SQL + deploy Edge Function + env) | `docs/05-implementation/implementation.md` | Const. §11 |
 
 ### 3.6 Checklist v1
 - ☐ Recorrido completo catálogo→lección con datos seed.
@@ -167,7 +167,7 @@
 ### 4.3 Docs / Checklist v2
 | ID | Tipo | Tarea | Archivos | Cubre |
 |---|---|---|---|---|
-| T-v2-011 | docs | Entrada de implementación v2 + instrucciones manuales | `docs/05-implementation.md` | Const. §11 |
+| T-v2-011 | docs | Entrada de implementación v2 + instrucciones manuales | `docs/05-implementation/implementation.md` | Const. §11 |
 
 - ☐ `due_at`/`interval_days`/`ease_factor` evolucionan según Q-03 (tests verdes).
 - ☐ Repasos cada 3 lecciones + generalista por tema con preguntas vencidas/previas.
@@ -186,7 +186,7 @@
 | T-v3-003 | frontend | Práctica de examen con filtros (curso/tema/dificultad) + `extra_information` | `app/features/exam-practice/*` | RF-26 |
 | T-v3-004 | frontend | Progreso enriquecido (avance por curso/tema, vencidas/pendientes, históricos) | `app/features/progress/*` | RF-34 |
 | T-v3-005 | frontend | Lecciones `expansion` y `final` | `app/features/lesson/types/{expansion,final}/*` | RF-44/45 |
-| T-v3-006 | docs | Revisión Q-06 (¿examen alimenta repaso?) + ADR si cambia | `docs/decisions/*`, `docs/05-implementation.md` | Q-06 |
+| T-v3-006 | docs | Revisión Q-06 (¿examen alimenta repaso?) + ADR si cambia | `docs/00-decisions/*`, `docs/05-implementation/implementation.md` | Q-06 |
 
 ---
 
@@ -197,7 +197,7 @@
 | T-v4-001 | testing | Auditoría de accesibilidad (AA) en pantallas clave | `app/**` | RA-01…RA-06 |
 | T-v4-002 | infra | Build Capacitor probado en dispositivo | `app/**`, `capacitor.config.ts` | RM-03 |
 | T-v4-003 | frontend | Gamificación ligera (rachas) — opcional | `app/features/streaks/*` | RP-* |
-| T-v4-004 | docs | Preparación premium/multiusuario (sin pagos) | `docs/decisions/*` | RSP-07 |
+| T-v4-004 | docs | Preparación premium/multiusuario (sin pagos) | `docs/00-decisions/*` | RSP-07 |
 | T-v4-005 | infra | i18n base | `app/lib/i18n/*` | RNF-16 |
 
 ---
@@ -216,7 +216,7 @@
 - `certdeck-review-build-lesson` (v2)
 - `certdeck-exam-grade` (v3, opcional)
 
-> Recordatorio: cada uno se entrega como **archivo + instrucciones manuales** en `docs/05-implementation.md`. El propietario los revisa, aplica/despliega y configura el entorno.
+> Recordatorio: cada uno se entrega como **archivo + instrucciones manuales** en `docs/05-implementation/implementation.md`. El propietario los revisa, aplica/despliega y configura el entorno.
 
 ---
 

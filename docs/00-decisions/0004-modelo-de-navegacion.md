@@ -3,7 +3,7 @@
 - **Estado:** Aceptada
 - **Fecha:** 2026-06-15
 - **Fase:** Revisión de Requisitos 1.2.0
-- **Relacionado:** [Requisitos](../02-requirements.md) §3.1, §3.11, §3.12, RN-27/28; [Constitución](../01-constitution.md) §10; [ADR 0003](0003-render-strategy.md)
+- **Relacionado:** [Requisitos](../02-requirements/requirements.md) §3.1, §3.11, §3.12, RN-27/28; [Constitución](../01-constitution/constitution.md) §10; [ADR 0003](0003-render-strategy.md)
 
 ## Contexto
 

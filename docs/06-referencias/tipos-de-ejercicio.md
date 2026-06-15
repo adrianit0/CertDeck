@@ -4,7 +4,7 @@
 
 - **Estado:** Vivo (se amplía con cada tipo nuevo)
 - **Fecha:** 2026-06-15
-- **Relacionado:** [Requisitos §3.3–§3.6, §10.1](02-requirements.md) · `supabase/sql/script-002.sql` · `supabase/sql/script-004.sql`
+- **Relacionado:** [Requisitos §3.3–§3.6, §10.1](../02-requirements/requirements.md) · `supabase/sql/script-002.sql` · `supabase/sql/script-004.sql`
 
 ---
 

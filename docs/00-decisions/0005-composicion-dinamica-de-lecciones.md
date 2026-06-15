@@ -3,7 +3,7 @@
 - **Estado:** Aceptada
 - **Fecha:** 2026-06-15
 - **Fase:** Revisión de Requisitos 1.2.0
-- **Relacionado:** [Requisitos](../02-requirements.md) §3.9, §3.6bis, RN-21…26, RN-17; [ADR 0002](0002-logica-desbloqueo-y-repaso.md)
+- **Relacionado:** [Requisitos](../02-requirements/requirements.md) §3.9, §3.6bis, RN-21…26, RN-17; [ADR 0002](0002-logica-desbloqueo-y-repaso.md)
 
 ## Contexto
 

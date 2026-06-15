@@ -4,7 +4,7 @@
 - **Fecha:** 2026-06-15
 - **Fase:** 5 — Implementación (v0, tarea T-v0-001)
 - **Decisores:** Propietario del proyecto (vía aprobación de v0)
-- **Relacionado:** [Constitución](../01-constitution.md) §8; [Roadmap](../03-roadmap.md) RT-01; RM-03, RNF-01/03
+- **Relacionado:** [Constitución](../01-constitution/constitution.md) §8; [Roadmap](../03-roadmap/roadmap.md) RT-01; RM-03, RNF-01/03
 
 ## Contexto
 

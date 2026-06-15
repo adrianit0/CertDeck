@@ -1,6 +1,6 @@
 # CertDeck — Requisitos
 
-> Fase 2 del Spec Driven Development. Define **qué** debe hacer CertDeck (no el cómo). Se rige por la [Constitución](01-constitution.md); en caso de conflicto, prevalece la Constitución. Los requisitos se identifican con códigos estables (`RF-`, `RNF-`, `HU-`, `RN-`) para poder trazarlos desde la hoja de ruta y las tareas.
+> Fase 2 del Spec Driven Development. Define **qué** debe hacer CertDeck (no el cómo). Se rige por la [Constitución](../01-constitution/constitution.md); en caso de conflicto, prevalece la Constitución. Los requisitos se identifican con códigos estables (`RF-`, `RNF-`, `HU-`, `RN-`) para poder trazarlos desde la hoja de ruta y las tareas.
 
 - **Estado:** Aprobada (revisión mayor de UX, navegación y composición de lecciones)
 - **Versión:** 1.2.0
@@ -19,7 +19,7 @@
 | **Tema** | Conjunto de lecciones sobre un área concreta. |
 | **Lección** | Unidad mínima de estudio; contiene pantallas de contenido y ejercicios. |
 | **Pantalla de contenido** | Bloque explicativo dentro de una lección, mostrado poco a poco. |
-| **Ejercicio** | Interacción evaluable: tarjeta ANKI, test, verdadero/falso, respuesta escrita o examen. Ver [catálogo](06-tipos-de-ejercicio.md). |
+| **Ejercicio** | Interacción evaluable: tarjeta ANKI, test, verdadero/falso, respuesta escrita o examen. Ver [catálogo](../06-referencias/tipos-de-ejercicio.md). |
 | **Tarjeta (flashcard)** | Ejercicio frontal/reverso con autoevaluación (Incorrecto/Correcto/Muy fácil). |
 | **Repaso** | Lección que reutiliza preguntas previas según el algoritmo espaciado. |
 | **Corrección de errores** | Lección centrada en preguntas que el usuario falló. |
@@ -82,7 +82,7 @@
 
 ### 3.5bis Ejercicio — Respuesta escrita (`text_input`)
 
-> Tipo pensado **casi exclusivamente** para respuestas de **1 palabra** o **1 número**. Ver el [catálogo de tipos de ejercicio](06-tipos-de-ejercicio.md).
+> Tipo pensado **casi exclusivamente** para respuestas de **1 palabra** o **1 número**. Ver el [catálogo de tipos de ejercicio](../06-referencias/tipos-de-ejercicio.md).
 
 - **RF-23a** Se muestra una pregunta con un **input de texto** y, debajo, **un hueco por cada letra** de la respuesta (el usuario ve cuántas letras tiene).
 - **RF-23b** La comprobación es **tolerante**: ignora mayúsculas/minúsculas y espacios sobrantes, y **sustituye tildes y diacríticos** en **ambas** respuestas (correcta y del usuario) antes de comparar — p. ej., con respuesta `España`, el usuario que escriba ` éspanA` **acierta** (alguien sin "ñ" puede usar "n").
@@ -278,7 +278,7 @@ Cada tarjeta mantiene por usuario: `ease_factor`, `interval_days`, `repetitions`
 - **RN-20** Cada intento de pregunta se registra con `was_correct`, `selected_answer`, `attempt_number`, `exercise_type` y `question_source`.
 
 ### 6.6 Composición de lecciones (repaso / errores / finales)
-> Ver [ADR 0005](decisions/0005-composicion-dinamica-de-lecciones.md). **Solo `normal` (y examen) tienen preguntas propias**; el resto se compone reciclando.
+> Ver [ADR 0005](../00-decisions/0005-composicion-dinamica-de-lecciones.md). **Solo `normal` (y examen) tienen preguntas propias**; el resto se compone reciclando.
 - **RN-21** El **pool de reciclaje** de un usuario son las preguntas que **ya ha visto** (con intento registrado), recuperables por la jerarquía `Pregunta → Lección → Tema → Etapa → Curso`.
 - **RN-22** **Repaso de tema** = preguntas ya vistas de **ese tema**. **Repaso general** = 50% del tema actual + 50% de temas anteriores.
 - **RN-23** **Errores de tema** = preguntas de **ese tema** con último intento incorrecto; si no hay, se comporta como **repaso de tema**. **Errores generales** = 50% falladas del tema + 50% falladas de otros temas; si no hay, se comporta como **repaso general**.
@@ -356,7 +356,7 @@ Tras completar una lección:
 ## 10. Tipos de ejercicio y de lección (referencia)
 
 ### 10.1 Tipos de ejercicio
-> Catálogo detallado (propiedades y funcionamiento) en [docs/06-tipos-de-ejercicio.md](06-tipos-de-ejercicio.md).
+> Catálogo detallado (propiedades y funcionamiento) en [docs/06-referencias/tipos-de-ejercicio.md](../06-referencias/tipos-de-ejercicio.md).
 
 | Código (`exercise_type`) | Descripción | Origen (`question_source`) |
 |---|---|---|
@@ -444,12 +444,12 @@ Tras completar una lección:
 - **Q-02 ✅** Tarjeta problemática a partir de **3 fallos** (ver RN-13/RN-17).
 - **Q-03 ✅** Parámetros por defecto del algoritmo espaciado fijados (ver RN-16).
 - **Q-04 ✅** Repaso **cada 3 lecciones** + generalista al cierre de cada tema (ver RN-06).
-- **Q-05 ✅** Lógica de desbloqueo/repaso **híbrida**: cálculo optimista en cliente + validación/persistencia autoritativa en Edge Functions + RLS (ver [ADR 0002](decisions/0002-logica-desbloqueo-y-repaso.md)).
+- **Q-05 ✅** Lógica de desbloqueo/repaso **híbrida**: cálculo optimista en cliente + validación/persistencia autoritativa en Edge Functions + RLS (ver [ADR 0002](../00-decisions/0002-logica-desbloqueo-y-repaso.md)).
 - **Q-06 ✅** La práctica directa de examen **no** altera `user_spaced_repetition` en el MVP (registra intentos); revisable en v3.
 
 **Decisiones de la revisión 1.2.0 (2026-06-15):**
-- **Navegación con barra inferior + curso/etapa activos** (ver [ADR 0004](decisions/0004-modelo-de-navegacion.md)).
-- **Composición dinámica de lecciones de repaso/errores/finales** reciclando preguntas ya vistas; solo `normal`/examen tienen preguntas propias (ver [ADR 0005](decisions/0005-composicion-dinamica-de-lecciones.md)).
+- **Navegación con barra inferior + curso/etapa activos** (ver [ADR 0004](../00-decisions/0004-modelo-de-navegacion.md)).
+- **Composición dinámica de lecciones de repaso/errores/finales** reciclando preguntas ya vistas; solo `normal`/examen tienen preguntas propias (ver [ADR 0005](../00-decisions/0005-composicion-dinamica-de-lecciones.md)).
 - **Ronda de corrección** en lugar de reencolado inmediato (RF-29a…e, RN-17).
 
 ---
@@ -474,4 +474,4 @@ Esta fase se considera **aprobada** cuando el propietario confirma que:
 | 1.0.0 | 2026-06-14 | Versión inicial de Requisitos (Fase 2). Pendiente de aprobación. |
 | 1.1.0 | 2026-06-15 | Integradas las decisiones Q-01…Q-06 (RN-06, RN-07, RN-13, RN-16, §16). Estado: aprobada. |
 | 1.2.0 | 2026-06-15 | Revisión mayor: barra de navegación inferior (Cursos/Repasos/Progresos/Perfil), curso/etapa activos (§3.1, RN-27/28, ADR 0004); tema solo nombre sin resumen (RF-05); ronda de corrección (§3.6bis, RN-17); composición dinámica de repaso/errores/finales reciclando preguntas, solo `normal`/examen con preguntas propias (§3.9, RN-21…26, ADR 0005); lección a pantalla completa con botones abajo, fuente mayor y Markdown negrita (§3.12, RF-50…53). |
-| 1.3.0 | 2026-06-15 | Limpieza del modelo de juego: lecciones sin `estimated_minutes`; preguntas flashcard sin `position` (orden aleatorio) ni `difficulty` (RN-09b). Nuevo tipo de ejercicio **`text_input`** (respuesta escrita con comprobación tolerante y pista) (§3.5bis, RF-23a…c, RN-09c, §10.1) y nuevo [catálogo de tipos de ejercicio](06-tipos-de-ejercicio.md). SQL: `script-004.sql`. |
+| 1.3.0 | 2026-06-15 | Limpieza del modelo de juego: lecciones sin `estimated_minutes`; preguntas flashcard sin `position` (orden aleatorio) ni `difficulty` (RN-09b). Nuevo tipo de ejercicio **`text_input`** (respuesta escrita con comprobación tolerante y pista) (§3.5bis, RF-23a…c, RN-09c, §10.1) y nuevo [catálogo de tipos de ejercicio](../06-referencias/tipos-de-ejercicio.md). SQL: `script-004.sql`. |

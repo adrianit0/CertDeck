@@ -1,7 +1,3 @@
-// Shared HTTP helpers for Gessalud edge functions.
-// Extracted from auth-login / auth-register (T-09); see
-// docs/01-specs/revision-edge-functions.md for the rationale.
-
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",

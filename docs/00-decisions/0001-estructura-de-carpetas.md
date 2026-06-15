@@ -24,7 +24,7 @@ Esto crea un conflicto entre la estructura prescrita por el prompt y la estructu
 
 Se adopta la estructura **ya existente en el repositorio**:
 
-- La documentación de Spec Driven Development vive en **`docs/`** (`01-constitution.md`, `02-requirements.md`, `03-roadmap.md`, `04-tasks.md`, `05-implementation.md`, `decisions/`).
+- La documentación de Spec Driven Development vive en **`docs/`**, con **una carpeta numerada por documento** (`NN-nombre/nombre.md`): `01-constitution/`, `02-requirements/`, `03-roadmap/`, `04-tasks/`, `05-implementation/`, más las carpetas de apoyo `00-decisions/` (ADR), `06-referencias/` y `08-courses/`.
 - Los artefactos de Supabase viven en **`supabase/`**:
   - Edge Functions nuevas en `supabase/functions/<nombre-funcion>/index.ts`.
   - Scripts SQL versionados en `supabase/sql/script-NNN.sql`.

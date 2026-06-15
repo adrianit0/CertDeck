@@ -1,6 +1,6 @@
 # CertDeck — Implementación
 
-> Fase 5 del Spec Driven Development. Bitácora de lo implementado por iteración, con archivos, artefactos, decisiones, supuestos, riesgos, **instrucciones manuales para el propietario** y checklist de validación. Se rige por la [Constitución](01-constitution.md), [Requisitos](02-requirements.md), [Roadmap](03-roadmap.md) y [Tareas](04-tasks.md).
+> Fase 5 del Spec Driven Development. Bitácora de lo implementado por iteración, con archivos, artefactos, decisiones, supuestos, riesgos, **instrucciones manuales para el propietario** y checklist de validación. Se rige por la [Constitución](../01-constitution/constitution.md), [Requisitos](../02-requirements/requirements.md), [Roadmap](../03-roadmap/roadmap.md) y [Tareas](../04-tasks/tasks.md).
 
 - **Estado:** En progreso
 - **Versión:** 1.0.0
@@ -12,7 +12,7 @@
 ## Iteración v0 — Fundaciones (2026-06-15)
 
 ### 1. Resumen
-Esqueleto técnico del frontend (Next.js App Router + TypeScript estricto + Capacitor) con **static export (SPA)** según [ADR 0003](decisions/0003-render-strategy.md), design tokens (paleta azul/celeste/blanco), componentes UI base, cliente Supabase centralizado, consumo de sesión (solo lectura) y runner de tests. Se entrega además el primer script SQL de **contenido** (no aplicado). Verificado en local: typecheck, lint, tests y build de export en verde.
+Esqueleto técnico del frontend (Next.js App Router + TypeScript estricto + Capacitor) con **static export (SPA)** según [ADR 0003](../00-decisions/0003-render-strategy.md), design tokens (paleta azul/celeste/blanco), componentes UI base, cliente Supabase centralizado, consumo de sesión (solo lectura) y runner de tests. Se entrega además el primer script SQL de **contenido** (no aplicado). Verificado en local: typecheck, lint, tests y build de export en verde.
 
 ### 2. Fase / tareas cubiertas
 Roadmap **v0**; tareas T-v0-001 … T-v0-011 (T-v0-010 SQL incluida; ver §6).
@@ -27,7 +27,7 @@ Roadmap **v0**; tareas T-v0-001 … T-v0-011 (T-v0-010 SQL incluida; ver §6).
 - **Utilidades + tests:** `lib/utils.ts`, `lib/__tests__/utils.test.ts`.
 
 ### 4. Archivos de documentación creados/actualizados
-- Creados: `docs/decisions/0003-render-strategy.md`, este `docs/05-implementation.md`.
+- Creados: `docs/00-decisions/0003-render-strategy.md`, este `docs/05-implementation/implementation.md`.
 - (En iteraciones previas: ADR 0001/0002, fases 01–04.)
 
 ### 5. Decisiones técnicas
@@ -99,11 +99,11 @@ Se habilita la **creación de lecciones con preguntas**: tablas del catálogo de
 - `supabase/sql/script-002.sql` — `certdeck_flashcard_questions` (con `exercise_type`, constraints por tipo) y `certdeck_exam_questions` (type_id 1/2, answer_1..6, correct_answers_count); índices, trigger y **RLS de lectura** de preguntas activas en contenido publicado.
 - `supabase/sql/script-004.sql` — **limpieza del modelo de juego**: elimina `estimated_minutes` (lecciones) y `position` + `difficulty` (flashcards); añade el tipo `text_input`; nueva clave natural `(lesson_id, question)` para idempotencia de seeds; `text_input` admitido en `certdeck_user_question_attempts`.
 - `supabase/sql_contenido/20260515_02_aws-saa-c03.sql` — fragmento 02: etapa *Básico*, tema *Introduction to S3*, 5 lecciones con pantallas de contenido y preguntas variadas (ANKI / test / V-F / **respuesta escrita**). Idempotente (`on conflict` por `(lesson_id, question)`).
-- `docs/06-tipos-de-ejercicio.md` — catálogo dedicado a los tipos de ejercicio (propiedades y funcionamiento).
+- `docs/06-referencias/tipos-de-ejercicio.md` — catálogo dedicado a los tipos de ejercicio (propiedades y funcionamiento).
 
 ### 4. Decisiones de diseño
 - **`exercise_type` en `certdeck_flashcard_questions`:** necesario para que una misma tabla sirva a tarjeta ANKI, test de 3 respuestas, verdadero/falso y respuesta escrita (`text_input`).
-- **Preguntas sin `position` ni `difficulty`:** las preguntas de una lección se extraen todas y se barajan en cliente (orden aleatorio); se prima la calidad sobre forzar un reparto por dificultad. Ver [catálogo de tipos](06-tipos-de-ejercicio.md).
+- **Preguntas sin `position` ni `difficulty`:** las preguntas de una lección se extraen todas y se barajan en cliente (orden aleatorio); se prima la calidad sobre forzar un reparto por dificultad. Ver [catálogo de tipos](../06-referencias/tipos-de-ejercicio.md).
 - **Jerarquía interpretada:** etapa *Básico* cubrirá S3 / AWS API / VPC; el primer **tema** es *Introduction to S3*. S3/AWS API/VPC serán temas futuros de la etapa.
 - **Repaso (L4) y final (L5)** se autoría con preguntas explícitas; cuando exista `certdeck-review-build-lesson` (v2) el repaso podrá componerse dinámicamente.
 - **RNF-14:** las políticas de lectura exponen la respuesta correcta al cliente (simplicidad MVP); la validación autoritativa irá en Edge Functions.

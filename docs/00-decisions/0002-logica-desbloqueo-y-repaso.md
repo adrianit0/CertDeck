@@ -4,7 +4,7 @@
 - **Fecha:** 2026-06-15
 - **Fase:** 3 — Hoja de ruta (resuelve Q-05)
 - **Decisores:** Propietario del proyecto
-- **Relacionado:** [Constitución](../01-constitution.md) §3.5, §9; [Requisitos](../02-requirements.md) RN-04…RN-17, RSP-01…RSP-03; [ADR 0001](0001-estructura-de-carpetas.md)
+- **Relacionado:** [Constitución](../01-constitution/constitution.md) §3.5, §9; [Requisitos](../02-requirements/requirements.md) RN-04…RN-17, RSP-01…RSP-03; [ADR 0001](0001-estructura-de-carpetas.md)
 
 ## Contexto
 

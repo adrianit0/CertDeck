@@ -1,6 +1,6 @@
 # CertDeck — Hoja de ruta (Roadmap)
 
-> Fase 3 del Spec Driven Development. Define **en qué orden** y **en qué versiones** se construye CertDeck, con entregables, dependencias, riesgos y criterios de aceptación por hito. Se rige por la [Constitución](01-constitution.md) y desarrolla los [Requisitos](02-requirements.md). Toda referencia a requisitos usa sus códigos (`RF-`, `RN-`, etc.).
+> Fase 3 del Spec Driven Development. Define **en qué orden** y **en qué versiones** se construye CertDeck, con entregables, dependencias, riesgos y criterios de aceptación por hito. Se rige por la [Constitución](../01-constitution/constitution.md) y desarrolla los [Requisitos](../02-requirements/requirements.md). Toda referencia a requisitos usa sus códigos (`RF-`, `RN-`, etc.).
 
 - **Estado:** Aprobada
 - **Versión:** 1.0.0
@@ -30,7 +30,7 @@ Orden macro:
 4. **v3 — Examen avanzado + progreso enriquecido**.
 5. **v4+ — Pulido, accesibilidad avanzada y preparación premium/offline**.
 
-> Cada versión termina con su entrada en `docs/05-implementation.md` (Fase 5) y un checklist de validación manual para el propietario.
+> Cada versión termina con su entrada en `docs/05-implementation/implementation.md` (Fase 5) y un checklist de validación manual para el propietario.
 
 ---
 

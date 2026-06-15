@@ -1,6 +1,6 @@
 # CertDeck — Constitución del Proyecto
 
-> **Documento maestro de gobernanza.** Establece las reglas no negociables del proyecto. Toda fase posterior (requisitos, hoja de ruta, tareas, implementación) y todo el código generado deben respetar este documento. En caso de conflicto entre cualquier artefacto y esta Constitución, **prevalece la Constitución**, salvo que el propietario apruebe explícitamente una excepción documentada en `docs/decisions/`.
+> **Documento maestro de gobernanza.** Establece las reglas no negociables del proyecto. Toda fase posterior (requisitos, hoja de ruta, tareas, implementación) y todo el código generado deben respetar este documento. En caso de conflicto entre cualquier artefacto y esta Constitución, **prevalece la Constitución**, salvo que el propietario apruebe explícitamente una excepción documentada en `docs/00-decisions/`.
 
 - **Estado:** Aprobada
 - **Versión:** 1.4.0
@@ -179,7 +179,7 @@ El agente IA **debe** cumplir obligatoriamente:
 3. **Iconos grandes** y **botones grandes** con área táctil cómoda.
 4. **Contraste suficiente** para legibilidad (objetivo WCAG AA en texto y controles).
 5. Navegación clara y consistente: el usuario siempre sabe dónde está y cuál es la siguiente acción.
-6. **Barra de navegación inferior** persistente (Cursos / Repasos / Progresos / Perfil), salvo **dentro de una lección**, donde se **oculta** (modo concentración). Ver [ADR 0004](decisions/0004-modelo-de-navegacion.md).
+6. **Barra de navegación inferior** persistente (Cursos / Repasos / Progresos / Perfil), salvo **dentro de una lección**, donde se **oculta** (modo concentración). Ver [ADR 0004](../00-decisions/0004-modelo-de-navegacion.md).
 7. **Curso/etapa activos:** el usuario estudia un curso seleccionado que persiste hasta que lo cambie; el selector superior permite cambiar curso/etapa entre lo desbloqueado.
 8. **Controles abajo:** dentro de una lección, **todos los botones se anclan en la parte inferior** (el usuario no sube el dedo arriba). Botones de igual ancho cuando van en grupo (p. ej. ANKI: Incorrecto / Correcto / Muy fácil, mismo ancho).
 9. **Contenido legible:** en lecciones, **fuente algo mayor** y contenido **repartido/espaciado** (no amontonado arriba). Se soporta **Markdown de negrita** (`**…**` → **negrita**).
@@ -194,16 +194,16 @@ El agente IA **debe** cumplir obligatoriamente:
 ## 11. Reglas de documentación
 
 1. Toda la documentación de Spec Driven Development vive en `docs/`:
-   - `docs/01-constitution.md`
-   - `docs/02-requirements.md`
-   - `docs/03-roadmap.md`
-   - `docs/04-tasks.md`
-   - `docs/05-implementation.md`
-   - `docs/decisions/` — registro de decisiones (ADR), una por archivo.
+   - `docs/01-constitution/constitution.md`
+   - `docs/02-requirements/requirements.md`
+   - `docs/03-roadmap/roadmap.md`
+   - `docs/04-tasks/tasks.md`
+   - `docs/05-implementation/implementation.md`
+   - `docs/00-decisions/` — registro de decisiones (ADR), una por archivo.
 2. Cada documento indica **estado, versión, fecha y fase**.
-3. Las decisiones técnicas relevantes se registran como ADR en `docs/decisions/` (contexto, decisión, alternativas, consecuencias).
+3. Las decisiones técnicas relevantes se registran como ADR en `docs/00-decisions/` (contexto, decisión, alternativas, consecuencias).
 4. La documentación se actualiza **antes** o **junto** con el código que describe, nunca después de forma diferida.
-5. Cada iteración produce un bloque de entrega en `docs/05-implementation.md` con: resumen, archivos creados/modificados, SQL generado, Edge Functions generadas, decisiones, supuestos, riesgos, instrucciones manuales y checklist de validación.
+5. Cada iteración produce un bloque de entrega en `docs/05-implementation/implementation.md` con: resumen, archivos creados/modificados, SQL generado, Edge Functions generadas, decisiones, supuestos, riesgos, instrucciones manuales y checklist de validación.
 6. El idioma de la documentación es **español**; el código (identificadores) puede usar inglés siguiendo convenciones del stack.
 
 ---
@@ -224,12 +224,19 @@ El agente IA **debe** cumplir obligatoriamente:
 │   └── ...
 │
 ├── docs/                     # Documentación Spec Driven Development
-│   ├── 01-constitution.md
-│   ├── 02-requirements.md
-│   ├── 03-roadmap.md
-│   ├── 04-tasks.md
-│   ├── 05-implementation.md
-│   └── decisions/
+│   ├── 00-decisions/         # registro de decisiones (ADR), una por archivo
+│   ├── 01-constitution/      # carpeta por documento: NN-nombre/nombre.md
+│   │   └── constitution.md
+│   ├── 02-requirements/
+│   │   └── requirements.md
+│   ├── 03-roadmap/
+│   │   └── roadmap.md
+│   ├── 04-tasks/
+│   │   └── tasks.md
+│   ├── 05-implementation/
+│   │   └── implementation.md
+│   ├── 06-referencias/       # material de consulta (tipos de ejercicio, prompts…)
+│   └── 08-courses/           # documentación de contenido por curso
 │
 ├── supabase/
 │   ├── functions/            # SOLO Edge Functions NUEVAS (nunca login/registro)
@@ -247,11 +254,11 @@ El agente IA **debe** cumplir obligatoriamente:
 └── README.md
 ```
 
-> **Nota de decisión:** el prompt maestro proponía `specs/` y `supabase-artifacts/`. Se adopta `docs/` y `supabase/` por decisión del propietario, alineándose con el scaffold existente y con `.gitignore`. Se registrará como ADR en `docs/decisions/`.
+> **Nota de decisión:** el prompt maestro proponía `specs/` y `supabase-artifacts/`. Se adopta `docs/` y `supabase/` por decisión del propietario, alineándose con el scaffold existente y con `.gitignore`. Se registrará como ADR en `docs/00-decisions/`.
 
 ### 12.2 Convenciones de nombres
 
-- **Documentos de specs:** `NN-nombre.md` (numeración con dos dígitos).
+- **Documentos de specs:** cada documento vive en su **carpeta numerada** `NN-nombre/` y dentro el archivo `nombre.md` (sin numerar); p. ej. `docs/01-constitution/constitution.md`. Las carpetas de apoyo también van numeradas (`00-decisions/`, `06-referencias/`, `08-courses/`).
 - **Scripts SQL estructurales** (`supabase/sql/`): `script-NNN.sql` (tres dígitos, incremental, nunca reutilizado).
 - **Archivos SQL de contenido** (`supabase/sql_contenido/`): fragmentos nombrados **`YYYYMMDD_NN_<slug>.sql`** (fecha invertida `AAAAMMDD` + contador `NN` de 2 dígitos + `slug` en `kebab-case`; p. ej. `20260515_01_aws-saa-c03.sql`). El orden alfabético = orden de ejecución. Solo datos (`INSERT`/`UPDATE`), idempotentes, nunca cambios de esquema.
 - **Edge Functions (nuevas):** carpeta `certdeck-<kebab-case>` con `index.ts` dentro (p. ej. `certdeck-progress-complete-lesson`). **Excepción:** las Edge Functions **preexistentes y compartidas** de login/registro (`auth-login`, `auth-register`, `_shared/`) **NO se renombran** ni se tocan (Constitución §4).
@@ -261,7 +268,7 @@ El agente IA **debe** cumplir obligatoriamente:
 - **Hooks:** `useCamelCase`.
 - **Archivos de utilidades/lógica:** `camelCase.ts` o `kebab-case.ts` consistente por carpeta.
 - **Variables y funciones TS:** `camelCase`; constantes globales `UPPER_SNAKE_CASE`.
-- **ADR:** `docs/decisions/NNNN-titulo-kebab.md`.
+- **ADR:** `docs/00-decisions/NNNN-titulo-kebab.md`.
 
 ---
 
@@ -275,7 +282,7 @@ El agente IA **debe** cumplir obligatoriamente:
 6. **Rendimiento móvil:** carga inicial ligera; sin bloqueos perceptibles en interacción.
 7. **SQL seguro:** FKs, constraints, índices y RLS donde proceda.
 8. **Documentación al día:** cada cambio acompañado de su entrada en specs.
-9. **Trazabilidad:** cada cambio enlaza con una tarea de `docs/04-tasks.md`.
+9. **Trazabilidad:** cada cambio enlaza con una tarea de `docs/04-tasks/tasks.md`.
 
 ---
 
