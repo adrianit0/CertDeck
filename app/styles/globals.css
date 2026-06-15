@@ -24,6 +24,16 @@
   --color-warning-bg: #fffbeb;
 }
 
+/**
+ * Altura completa para que el shell pueda fijarse a la altura real del viewport
+ * (`h-full`). Sin esto, el contenedor crecería con el contenido y el header/footer
+ * se irían con el scroll de la página en lugar de quedar fijos.
+ */
+html,
+body {
+  height: 100%;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-bg-main);
@@ -33,6 +43,20 @@ body {
   /* Respeta el notch / áreas seguras en móvil (Capacitor). */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
+}
+
+/**
+ * En móvil bloqueamos el scroll del propio `body`: la página ocupa exactamente
+ * el viewport y SOLO desplaza el contenido interno (`flex-1 overflow-y-auto`),
+ * así el header y la barra de navegación inferior quedan siempre fijos. En
+ * escritorio mantenemos el comportamiento normal (la tarjeta se centra y la
+ * página puede desplazarse si la ventana es más baja que la tarjeta).
+ */
+@media (max-width: 639px) {
+  body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
 }
 
 /**

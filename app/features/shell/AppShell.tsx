@@ -313,8 +313,8 @@ export default function AppShell() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 flex justify-center items-center py-0 sm:py-6 px-0 sm:px-4">
-      <div className="w-full max-w-md min-h-screen sm:min-h-[850px] sm:max-h-[880px] bg-slate-50 relative flex flex-col rounded-none sm:rounded-[40px] shadow-none sm:shadow-2xl border border-transparent sm:border-slate-100 overflow-hidden">
+    <div className="h-full sm:h-auto sm:min-h-screen w-full bg-slate-100 flex justify-center items-center py-0 sm:py-6 px-0 sm:px-4">
+      <div className="w-full max-w-md h-full sm:h-auto sm:min-h-[850px] sm:max-h-[880px] bg-slate-50 relative flex flex-col rounded-none sm:rounded-[40px] shadow-none sm:shadow-2xl border border-transparent sm:border-slate-100 overflow-hidden">
         {/* Cabecera (oculta dentro de la lección) */}
         {currentLessonId === null && (
           <header className="px-5 pt-5 pb-1 flex justify-between items-center bg-white border-b border-slate-50 shrink-0">
