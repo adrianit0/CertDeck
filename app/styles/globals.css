@@ -146,6 +146,32 @@ body.dark {
   transform: rotateY(180deg);
 }
 
+/**
+ * Lección ACTUAL: efecto sutil de "respiración" (escala ligera) + aura ámbar
+ * pulsante para que destaque sin resultar molesto. Reemplaza a `animate-pulse`
+ * (que solo varía opacidad). Respeta `prefers-reduced-motion`.
+ */
+@keyframes certdeck-breathe {
+  0%,
+  100% {
+    transform: scale(1.015);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.28);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 20px 4px rgba(245, 158, 11, 0.22);
+  }
+}
+.animate-breathe {
+  animation: certdeck-breathe 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-breathe {
+    animation: none;
+    transform: scale(1.015);
+  }
+}
+
 /* Oculta la barra de scroll manteniendo el desplazamiento. */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
