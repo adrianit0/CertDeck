@@ -35,6 +35,79 @@ body {
     env(safe-area-inset-left);
 }
 
+/**
+ * MODO OSCURO (estrategia por clase `.dark` en <html>).
+ *
+ * Las utilidades de Tailwind v4 referencian `var(--color-*)`, así que basta con
+ * redefinir esas variables dentro de `.dark` para re-tematizar TODA la app sin
+ * tocar los componentes (incluidas las variantes con opacidad, que usan
+ * color-mix sobre la misma variable). La rampa `slate` se invierte (las
+ * superficies claras pasan a oscuras y el texto oscuro a claro) y los acentos
+ * `-50/-100` se oscurecen con su texto aclarado para mantener el contraste.
+ */
+.dark {
+  color-scheme: dark;
+
+  /* Superficies y rampa neutra (invertida). */
+  --color-bg-main: #0b1220;
+  --color-slate-50: #0f172a;
+  --color-slate-100: #1e293b;
+  --color-slate-200: #334155;
+  --color-slate-300: #475569;
+  --color-slate-400: #64748b;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #e2e8f0;
+  --color-slate-800: #f1f5f9;
+  /* `slate-900` se mantiene oscuro a propósito (banner de Repasos). */
+
+  /* Marca: se aclara ligeramente para legibilidad sobre fondo oscuro. */
+  --color-brand-primary: #3b82f6;
+  --color-brand-primary-hover: #2563eb;
+  --color-brand-primary-light: #1e3a8a;
+
+  /* Acentos: fondos `-50/-100` oscuros + texto `-600/-700` aclarado. */
+  --color-blue-50: #172554;
+  --color-blue-100: #1e3a8a;
+  --color-blue-600: #93c5fd;
+  --color-blue-700: #bfdbfe;
+
+  --color-sky-50: #082f49;
+  --color-sky-100: #0c4a6e;
+  --color-sky-600: #7dd3fc;
+
+  --color-emerald-50: #052e26;
+  --color-emerald-100: #064e3b;
+  --color-emerald-600: #6ee7b7;
+  --color-emerald-700: #a7f3d0;
+
+  --color-amber-50: #451a03;
+  --color-amber-100: #78350f;
+  --color-amber-600: #fcd34d;
+
+  --color-rose-50: #4c0519;
+  --color-rose-100: #881337;
+  --color-rose-500: #fb7185;
+  --color-rose-600: #fda4af;
+
+  --color-red-100: #7f1d1d;
+
+  --color-purple-500: #c4b5fd;
+
+  --color-neutral-50: #1e293b;
+}
+
+/* Tarjetas/superficies sólidas blancas → superficie oscura (los overlays
+   translúcidos `bg-white/NN` se mantienen como destellos sobre gradientes). */
+.dark .bg-white {
+  background-color: #1e293b;
+}
+
+.dark body,
+body.dark {
+  color: #e2e8f0;
+}
+
 /* Clases de volteo 3D para la tarjeta ANKI. */
 .perspective-1000 {
   perspective: 1000px;

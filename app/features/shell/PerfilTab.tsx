@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { User, Moon, Bell, HelpCircle, BookOpen, Check, LogOut } from "lucide-react";
 import type { Course, UserStats } from "@/lib/types";
+import { useTheme } from "@/hooks/useTheme";
 
 interface PerfilTabProps {
   stats: UserStats;
@@ -27,7 +28,7 @@ export default function PerfilTab({
 }: PerfilTabProps) {
   const [detailedExplanations, setDetailedExplanations] = useState(true);
   const [dailyReminder, setDailyReminder] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const { isDark, toggle: toggleTheme } = useTheme();
 
   return (
     <div className="pb-24 pt-4 px-4 space-y-6">
@@ -135,9 +136,9 @@ export default function PerfilTab({
               id: "opt-toggle-darkmode",
               icon: Moon,
               title: "Modo Oscuro",
-              subtitle: "Disponible próximamente",
-              value: darkMode,
-              onToggle: () => setDarkMode((v) => !v),
+              subtitle: "Reduce el brillo de la interfaz",
+              value: isDark,
+              onToggle: toggleTheme,
             },
           ].map((pref) => {
             const Icon = pref.icon;

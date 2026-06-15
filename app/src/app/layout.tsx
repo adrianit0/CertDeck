@@ -15,9 +15,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+// Aplica la clase `.dark` ANTES del primer pintado para evitar el parpadeo
+// claro→oscuro al cargar (lee la preferencia persistida en localStorage).
+const themeNoFlashScript = `try{if(localStorage.getItem('certdeck:theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

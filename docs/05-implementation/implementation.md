@@ -266,6 +266,20 @@ La escritura `completeLesson` ya pasaba por `certdeck-progress-complete-lesson` 
 
 ---
 
+## Modo oscuro (2026-06-15)
+
+> Tema claro/oscuro real, conmutable desde Perfil y persistente.
+
+### Enfoque
+- Estrategia por clase `.dark` en `<html>`. Como las utilidades de Tailwind v4 referencian `var(--color-*)`, se re-tematiza **redefiniendo esas variables dentro de `.dark`** en `styles/globals.css` (sin tocar los componentes): rampa `slate` invertida (superficies claras→oscuras, texto oscuro→claro), acentos `-50/-100` oscurecidos con su texto aclarado, marca ligeramente aclarada. `slate-900` se mantiene oscuro (banner de Repasos); `bg-white` sólido se redirige a superficie oscura mientras los overlays `bg-white/NN` se conservan como destellos.
+- `app/lib/theme.ts` (persistencia en localStorage + aplicar clase), `app/hooks/useTheme.ts` (estado/toggle), script anti-parpadeo en `layout.tsx` (aplica `.dark` antes del primer pintado; `suppressHydrationWarning`).
+- `PerfilTab`: el toggle "Modo Oscuro" ahora usa `useTheme` (antes era un placeholder).
+
+### Validación local
+- `typecheck`, `lint` y `build` (export estático) en verde; el bloque `.dark` y las utilidades `var(--color-*)` están presentes en el CSS exportado.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -275,3 +289,4 @@ La escritura `completeLesson` ya pasaba por `certdeck-progress-complete-lesson` 
 | 1.2.0 | 2026-06-15 | Cableado de contenido y progreso reales: se retira `mockData`; el shell consume `lib/queries` (Supabase) y el progreso real (local optimista + Edge Function). Métricas reales (XP, racha, errores). |
 | 1.3.0 | 2026-06-15 | Toda llamada a datos pasa por Edge Functions: 6 funciones de lectura nuevas (`certdeck-*`), helper cliente `lib/edge/invoke.ts` y `content.ts` reescrito sin acceso directo a tablas. |
 | 1.4.0 | 2026-06-15 | Login con persistencia de sesión vía Edge Function `auth-login` (`lib/auth/login`, `LoginScreen`, `AuthGate`) + cerrar sesión en Perfil. |
+| 1.5.0 | 2026-06-15 | Modo oscuro conmutable y persistente (clase `.dark` + remapeo de variables de tema Tailwind v4; `lib/theme`, `useTheme`, script anti-parpadeo). |

@@ -102,12 +102,14 @@ export default function LessonPlayer({
   const [failedList, setFailedList] = useState<FlashcardQuestion[]>([]);
   const [, setRecoveredCount] = useState(0);
 
-  // Empezar directamente con ejercicios si no hay pantallas de teoría.
+  // Empezar directamente con ejercicios SOLO si, ya cargado el contenido, no
+  // hay pantallas de teoría (p. ej. repasos). Mientras carga no se salta, para
+  // no perder las tarjetas de teoría que llegan de forma asíncrona.
   useEffect(() => {
-    if (screens.length === 0 && playerStep === "content") {
+    if (!loading && screens.length === 0 && playerStep === "content") {
       setPlayerStep("exercises");
     }
-  }, [screens, playerStep]);
+  }, [loading, screens, playerStep]);
 
   const activeQuestion: FlashcardQuestion | null =
     playerStep === "exercises"

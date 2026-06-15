@@ -13,6 +13,7 @@
     "cap:sync": "cap sync"
   },
   "dependencies": {
+    "@capacitor/android": "^6.2.1",
     "@supabase/supabase-js": "^2.45.0",
     "@tailwindcss/postcss": "^4.3.1",
     "lucide-react": "^1.18.0",
