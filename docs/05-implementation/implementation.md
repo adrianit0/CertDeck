@@ -280,6 +280,45 @@ La escritura `completeLesson` ya pasaba por `certdeck-progress-complete-lesson` 
 
 ---
 
+## Migración de persistencia del progreso a la BD (2026-06-15) — ADR 0006
+
+> Se elimina **toda persistencia local del progreso** (`certdeck:progress` en `localStorage`) y se traslada a la base de datos como única fuente de verdad. El cliente queda con estado **optimista en memoria** + write-through y manejo de red. El **tema** (`certdeck:theme`) y la **sesión** (JWT) siguen siendo locales (fuera de alcance).
+
+### Enfoque
+- **Lectura:** nueva Edge Function `certdeck-progress-get` que ensambla el `ProgressState` completo (lecciones + actividad de repasos agregada + errores pendientes + días activos). `AppShell` la carga al iniciar sesión y al **reconectar**.
+- **Escritura optimista:** los reductores puros `applyLessonCompleted`/`applyReviewSession` (`lib/progress/progressState.ts`) actualizan el estado en memoria al instante; en paralelo, `completeLesson`/`recordReview` persisten en la BD (write-through). `score`/`xp` se **recalculan en el servidor**.
+- **Reconciliación de errores:** `certdeck_user_failed_questions` se mantiene con alta de fallos / baja de recuperados en las funciones de lección y repaso.
+- **Red:** hook `useOnline` (navigator + eventos) y bandera `connectionLost` (fallo de escritura). Con `offline = !isOnline || connectionLost` se muestra un **banner superior** y se **bloquea iniciar lección/repaso**. Perder la sesión en curso es aceptable.
+- **Reset:** `certdeck-progress-reset` borra las filas del usuario en las 3 tablas.
+
+### Archivos
+- **Eliminado:** `app/lib/progress/localProgress.ts` (persistencia en disco).
+- **Nuevo:** `app/lib/progress/progressState.ts` (tipos + funciones puras + reductores en memoria), `app/hooks/useOnline.ts`.
+- **Reescrito:** `app/lib/queries/progress.ts` (`getProgress`/`completeLesson`/`recordReview`/`resetProgress` vía Edge Functions), `app/features/shell/AppShell.tsx` (carga BD, estado en memoria, banner, bloqueo offline).
+- **SQL:** `supabase/sql/script-005.sql` (+`xp`/`anki_count`; tablas `certdeck_user_review_sessions`, `certdeck_user_failed_questions`; RLS).
+- **Edge Functions:** `certdeck-progress-get` (nueva), `certdeck-progress-record-review` (nueva), `certdeck-progress-reset` (nueva), `certdeck-progress-complete-lesson` (modificada). Cada una con su `README.md`.
+
+### Instrucciones manuales para el propietario (Constitución §4)
+1. **Aplicar SQL** (orden, tras `script-001..004`):
+   ```sql
+   -- En el SQL Editor de Supabase, ejecutar el contenido de:
+   supabase/sql/script-005.sql
+   ```
+   Es idempotente (`add column if not exists`, `create table if not exists`).
+2. **Desplegar Edge Functions** (CLI de Supabase autenticada, desde la raíz):
+   ```bash
+   supabase functions deploy certdeck-progress-get
+   supabase functions deploy certdeck-progress-record-review
+   supabase functions deploy certdeck-progress-reset
+   supabase functions deploy certdeck-progress-complete-lesson   # redeploy: payload ampliado
+   ```
+3. **Verificar:** iniciar sesión, completar una lección y recargar → el progreso persiste; activar modo avión → aparece el banner y se bloquea iniciar lecciones.
+
+### Validación local
+- `typecheck`, `lint` y los **17 tests** en verde. El frontend compila; el progreso real depende de que el propietario aplique el SQL y despliegue las funciones.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -290,3 +329,4 @@ La escritura `completeLesson` ya pasaba por `certdeck-progress-complete-lesson` 
 | 1.3.0 | 2026-06-15 | Toda llamada a datos pasa por Edge Functions: 6 funciones de lectura nuevas (`certdeck-*`), helper cliente `lib/edge/invoke.ts` y `content.ts` reescrito sin acceso directo a tablas. |
 | 1.4.0 | 2026-06-15 | Login con persistencia de sesión vía Edge Function `auth-login` (`lib/auth/login`, `LoginScreen`, `AuthGate`) + cerrar sesión en Perfil. |
 | 1.5.0 | 2026-06-15 | Modo oscuro conmutable y persistente (clase `.dark` + remapeo de variables de tema Tailwind v4; `lib/theme`, `useTheme`, script anti-parpadeo). |
+| 1.6.0 | 2026-06-15 | Migración de la persistencia del progreso a la BD (ADR 0006): se elimina `localProgress` (localStorage), estado optimista en memoria + write-through, lectura desde `certdeck-progress-get`, banner/bloqueo offline; `script-005.sql` y 3 Edge Functions nuevas + 1 modificada (entregadas, no aplicadas). |

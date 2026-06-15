@@ -1,15 +1,13 @@
 // =============================================================================
-// CertDeck — Edge Function: certdeck-progress-complete-lesson
+// CertDeck — Edge Function: certdeck-progress-record-review
 // Runtime: Deno (Supabase Edge Functions). TypeScript.
 //
-// Persiste de forma AUTORITATIVA la finalización de una lección (ADR 0002/0006):
-//  - Verifica la sesión del usuario (JWT del header Authorization).
-//  - Recalcula en servidor el `score` y el `xp` (no confía en el cliente).
-//  - Hace upsert en certdeck_user_lesson_progress (incl. xp y anki_count).
-//  - Reconcilia certdeck_user_failed_questions: alta de los fallos de la sesión
-//    y baja de las preguntas recuperadas. (ADR 0006)
+// Persiste una SESIÓN DE REPASO (no atada a una lección) de forma autoritativa
+// (ADR 0006): inserta una fila en certdeck_user_review_sessions con el XP
+// recalculado en servidor y reconcilia certdeck_user_failed_questions (alta de
+// fallos / baja de recuperados).
 //
-// IMPORTANTE (Constitución §4): define su propio CORS. El agente NO la despliega.
+// IMPORTANTE (Constitución §4): CORS propio. El agente NO la despliega.
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -20,10 +18,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// XP autoritativo (misma fórmula que el cliente para una lección normal):
-// correctas * 50 + bonus de finalización de lección.
+// XP autoritativo de repaso: correctas * 50 + bonus de repaso.
 const XP_PER_CORRECT = 50;
-const XP_LESSON_BONUS = 250;
+const XP_REVIEW_BONUS = 100;
+
+const REVIEW_TYPES = ["topic-review", "general-review", "topic-errors", "general-errors"];
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -37,8 +36,8 @@ interface FailedRef {
   lessonId?: string | null;
 }
 
-interface CompleteLessonPayload {
-  lesson_id?: string;
+interface RecordReviewPayload {
+  review_type?: string;
   correct_count?: number;
   incorrect_count?: number;
   anki_count?: number;
@@ -53,24 +52,25 @@ Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return json({ error: "missing_authorization" }, 401);
 
-  let payload: CompleteLessonPayload;
+  let payload: RecordReviewPayload;
   try {
-    payload = (await req.json()) as CompleteLessonPayload;
+    payload = (await req.json()) as RecordReviewPayload;
   } catch {
     return json({ error: "invalid_json" }, 400);
   }
 
-  const lessonId = payload.lesson_id;
+  const reviewType = payload.review_type;
   const correct = Number(payload.correct_count ?? 0);
   const incorrect = Number(payload.incorrect_count ?? 0);
   const ankiCount = Math.max(0, Number(payload.anki_count ?? 0));
 
-  if (!lessonId || typeof lessonId !== "string") return json({ error: "missing_lesson_id" }, 400);
+  if (!reviewType || !REVIEW_TYPES.includes(reviewType)) {
+    return json({ error: "invalid_review_type" }, 400);
+  }
   if (!Number.isFinite(correct) || !Number.isFinite(incorrect) || correct < 0 || incorrect < 0) {
     return json({ error: "invalid_counts" }, 400);
   }
 
-  // Cliente con el JWT del usuario => RLS y auth.uid() activos.
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -81,33 +81,25 @@ Deno.serve(async (req: Request) => {
   if (userError || !userData.user) return json({ error: "unauthorized" }, 401);
   const userId = userData.user.id;
 
-  // Score y XP recalculados en servidor (no se confía en el cliente).
-  const total = correct + incorrect;
-  const score = total === 0 ? 100 : Math.round((correct / total) * 100);
-  const xp = correct * XP_PER_CORRECT + XP_LESSON_BONUS;
+  // XP recalculado en servidor (no se confía en el cliente).
+  const xp = correct * XP_PER_CORRECT + XP_REVIEW_BONUS;
 
   const { data, error } = await supabase
-    .from("certdeck_user_lesson_progress")
-    .upsert(
-      {
-        user_id: userId,
-        lesson_id: lessonId,
-        status: "completed",
-        score_percentage: score,
-        correct_count: correct,
-        incorrect_count: incorrect,
-        anki_count: ankiCount,
-        xp,
-        completed_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,lesson_id" },
-    )
+    .from("certdeck_user_review_sessions")
+    .insert({
+      user_id: userId,
+      review_type: reviewType,
+      xp,
+      total_answers: correct + incorrect,
+      correct_answers: correct,
+      anki_cards: ankiCount,
+    })
     .select()
     .single();
 
   if (error) return json({ error: "persist_failed", detail: error.message }, 500);
 
-  // --- Reconciliación de errores pendientes (best-effort, no bloquea el OK) ---
+  // --- Reconciliación de errores pendientes (best-effort) ---
   const passedIds = (payload.passed_question_ids ?? []).filter(
     (id): id is string => typeof id === "string",
   );
@@ -128,5 +120,5 @@ Deno.serve(async (req: Request) => {
       .upsert(failedRows, { onConflict: "user_id,question_id" });
   }
 
-  return json({ data: { ok: true, progress: data } });
+  return json({ data: { ok: true, review: data } });
 });

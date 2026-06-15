@@ -1,23 +1,18 @@
-"use client";
-
-import type {
-  FailedQuestionRef,
-  LessonStatus,
-  SessionResult,
-  UserStats,
-} from "@/lib/types";
+import type { FailedQuestionRef, LessonStatus, SessionResult, UserStats } from "@/lib/types";
 
 /**
- * Progreso OPTIMISTA en el cliente (capa no autoritativa del ADR 0002).
+ * Estado de progreso en MEMORIA (ADR 0006).
  *
- * Persistimos en localStorage para que el MVP sea usable de inmediato: refleja
- * al instante lecciones completadas, desbloqueo lineal y métricas reales de
- * estudio. La fuente de verdad será la Edge Function
- * `certdeck-progress-complete-lesson` + las tablas `certdeck_user_*` con RLS
- * (script-003.sql), que reconciliarán este estado.
+ * Ya NO se persiste en localStorage: la fuente de verdad es la base de datos
+ * (Edge Functions `certdeck-progress-*`). Este módulo solo contiene:
+ *   - Los tipos del estado.
+ *   - Funciones PURAS para derivar UI (desbloqueo, racha, métricas).
+ *   - Reductores PUROS para la actualización OPTIMISTA en memoria, que el
+ *     `AppShell` aplica al instante mientras la escritura viaja a la BD.
+ *
+ * Al recargar, el estado se vuelve a leer de la BD (`getProgress`), de modo que
+ * cualquier optimismo se reconcilia con la verdad del servidor.
  */
-
-const STORAGE_KEY = "certdeck:progress";
 
 export interface LessonProgress {
   status: Extract<LessonStatus, "in_progress" | "completed">;
@@ -46,7 +41,7 @@ export interface ProgressState {
   activeDays: string[];
 }
 
-function emptyState(): ProgressState {
+export function emptyState(): ProgressState {
   return {
     lessons: {},
     failedQuestions: {},
@@ -55,33 +50,36 @@ function emptyState(): ProgressState {
   };
 }
 
-/** Normaliza cualquier formato almacenado (incluido el legado) al actual. */
-function normalize(parsed: unknown): ProgressState {
+/**
+ * Normaliza la respuesta de `certdeck-progress-get` (o cualquier objeto parcial)
+ * al `ProgressState` actual, tolerando campos ausentes.
+ */
+export function normalize(parsed: unknown): ProgressState {
   const base = emptyState();
   if (!parsed || typeof parsed !== "object") return base;
   const obj = parsed as Record<string, unknown>;
 
-  // Formato legado: el objeto raíz ERA el mapa de lecciones (sin claves nuevas).
-  const lessonsSource =
-    obj.lessons && typeof obj.lessons === "object" ? (obj.lessons as Record<string, unknown>) : obj;
-
-  for (const [id, value] of Object.entries(lessonsSource)) {
-    if (!value || typeof value !== "object") continue;
-    const v = value as Record<string, unknown>;
-    if (v.status !== "completed" && v.status !== "in_progress") continue;
-    base.lessons[id] = {
-      status: v.status,
-      scorePercentage: typeof v.scorePercentage === "number" ? v.scorePercentage : 0,
-      correctCount: typeof v.correctCount === "number" ? v.correctCount : 0,
-      incorrectCount: typeof v.incorrectCount === "number" ? v.incorrectCount : 0,
-      ankiCount: typeof v.ankiCount === "number" ? v.ankiCount : 0,
-      xp: typeof v.xp === "number" ? v.xp : 0,
-      completedAt: typeof v.completedAt === "string" ? v.completedAt : null,
-    };
+  if (obj.lessons && typeof obj.lessons === "object") {
+    for (const [id, value] of Object.entries(obj.lessons as Record<string, unknown>)) {
+      if (!value || typeof value !== "object") continue;
+      const v = value as Record<string, unknown>;
+      if (v.status !== "completed" && v.status !== "in_progress") continue;
+      base.lessons[id] = {
+        status: v.status,
+        scorePercentage: typeof v.scorePercentage === "number" ? v.scorePercentage : 0,
+        correctCount: typeof v.correctCount === "number" ? v.correctCount : 0,
+        incorrectCount: typeof v.incorrectCount === "number" ? v.incorrectCount : 0,
+        ankiCount: typeof v.ankiCount === "number" ? v.ankiCount : 0,
+        xp: typeof v.xp === "number" ? v.xp : 0,
+        completedAt: typeof v.completedAt === "string" ? v.completedAt : null,
+      };
+    }
   }
 
   if (obj.failedQuestions && typeof obj.failedQuestions === "object") {
-    base.failedQuestions = obj.failedQuestions as Record<string, string>;
+    for (const [id, lessonId] of Object.entries(obj.failedQuestions as Record<string, unknown>)) {
+      if (typeof lessonId === "string") base.failedQuestions[id] = lessonId;
+    }
   }
   if (obj.review && typeof obj.review === "object") {
     const r = obj.review as Record<string, unknown>;
@@ -98,21 +96,6 @@ function normalize(parsed: unknown): ProgressState {
   return base;
 }
 
-function read(): ProgressState {
-  if (typeof window === "undefined") return emptyState();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? normalize(JSON.parse(raw)) : emptyState();
-  } catch {
-    return emptyState();
-  }
-}
-
-function write(state: ProgressState): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -122,55 +105,61 @@ function withTodayActive(days: string[]): string[] {
   return days.includes(t) ? days : [...days, t];
 }
 
-export function getProgressState(): ProgressState {
-  return read();
+/** Añade los fallos nuevos y retira los recuperados (devuelve un mapa nuevo). */
+function applyQuestionOutcomes(
+  failedQuestions: Record<string, string>,
+  result: SessionResult,
+): Record<string, string> {
+  const next = { ...failedQuestions };
+  for (const passedId of result.passedQuestionIds) delete next[passedId];
+  for (const failed of result.failedQuestions) next[failed.id] = failed.lessonId;
+  return next;
 }
 
-export function resetProgress(): void {
-  write(emptyState());
-}
-
-/** Marca una lección como completada con sus métricas reales de la sesión. */
-export function markLessonCompleted(lessonId: string, result: SessionResult): void {
-  const state = read();
-  state.lessons[lessonId] = {
-    status: "completed",
-    scorePercentage: result.scorePercentage,
-    correctCount: result.correctCount,
-    incorrectCount: result.incorrectCount,
-    ankiCount: result.ankiCount,
-    xp: result.xpGained,
-    completedAt: new Date().toISOString(),
+/**
+ * Reductor OPTIMISTA: marca una lección como completada en memoria con las
+ * métricas reales de la sesión. Devuelve un estado NUEVO (inmutable).
+ */
+export function applyLessonCompleted(
+  state: ProgressState,
+  lessonId: string,
+  result: SessionResult,
+): ProgressState {
+  return {
+    ...state,
+    lessons: {
+      ...state.lessons,
+      [lessonId]: {
+        status: "completed",
+        scorePercentage: result.scorePercentage,
+        correctCount: result.correctCount,
+        incorrectCount: result.incorrectCount,
+        ankiCount: result.ankiCount,
+        xp: result.xpGained,
+        completedAt: new Date().toISOString(),
+      },
+    },
+    failedQuestions: applyQuestionOutcomes(state.failedQuestions, result),
+    activeDays: withTodayActive(state.activeDays),
   };
-  state.activeDays = withTodayActive(state.activeDays);
-  applyQuestionOutcomes(state, result);
-  write(state);
 }
 
-/** Acumula la actividad de una sesión de repaso (no completa una lección). */
-export function recordReviewSession(result: SessionResult): void {
-  const state = read();
-  state.review.xp += result.xpGained;
-  state.review.totalAnswers += result.correctCount + result.incorrectCount;
-  state.review.correctAnswers += result.correctCount;
-  state.review.ankiCards += result.ankiCount;
-  state.activeDays = withTodayActive(state.activeDays);
-  applyQuestionOutcomes(state, result);
-  write(state);
+/** Reductor OPTIMISTA: acumula una sesión de repaso en memoria. */
+export function applyReviewSession(state: ProgressState, result: SessionResult): ProgressState {
+  return {
+    ...state,
+    review: {
+      xp: state.review.xp + result.xpGained,
+      totalAnswers: state.review.totalAnswers + result.correctCount + result.incorrectCount,
+      correctAnswers: state.review.correctAnswers + result.correctCount,
+      ankiCards: state.review.ankiCards + result.ankiCount,
+    },
+    failedQuestions: applyQuestionOutcomes(state.failedQuestions, result),
+    activeDays: withTodayActive(state.activeDays),
+  };
 }
 
-/** Añade los fallos nuevos y retira los que se recuperaron en la sesión. */
-function applyQuestionOutcomes(state: ProgressState, result: SessionResult): void {
-  for (const passedId of result.passedQuestionIds) {
-    delete state.failedQuestions[passedId];
-  }
-  for (const failed of result.failedQuestions) {
-    state.failedQuestions[failed.id] = failed.lessonId;
-  }
-}
-
-export function getFailedQuestions(): FailedQuestionRef[] {
-  const state = read();
+export function getFailedQuestions(state: ProgressState): FailedQuestionRef[] {
   return Object.entries(state.failedQuestions).map(([id, lessonId]) => ({ id, lessonId }));
 }
 
@@ -196,7 +185,6 @@ function computeStreak(activeDays: string[]): number {
   if (activeDays.length === 0) return 0;
   const set = new Set(activeDays);
   const cursor = new Date();
-  // Si no hubo actividad hoy, la racha solo cuenta si la hubo ayer.
   if (!set.has(cursor.toISOString().slice(0, 10))) {
     cursor.setDate(cursor.getDate() - 1);
     if (!set.has(cursor.toISOString().slice(0, 10))) return 0;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Trophy, Zap, Loader2, AlertCircle } from "lucide-react";
+import { Trophy, Zap, Loader2, AlertCircle, WifiOff } from "lucide-react";
 import type {
   Course,
   Stage,
@@ -17,18 +17,25 @@ import {
   getQuestionsByLessons,
   getQuestionsByIds,
 } from "@/lib/queries/content";
-import { completeLesson } from "@/lib/queries/progress";
+import {
+  getProgress,
+  completeLesson,
+  recordReview,
+  resetProgress,
+  type ReviewType,
+} from "@/lib/queries/progress";
 import { logout } from "@/lib/auth/login";
 import {
-  getProgressState,
+  emptyState,
+  applyLessonCompleted,
+  applyReviewSession,
   computeLessonStatus,
   computeUserStats,
-  recordReviewSession,
-  resetProgress,
   type ProgressState,
-} from "@/lib/progress/localProgress";
+} from "@/lib/progress/progressState";
 import { shuffle } from "@/lib/shuffle";
 import { useSession } from "@/hooks/useSession";
+import { useOnline } from "@/hooks/useOnline";
 import Navigation from "./Navigation";
 import CoursesTab from "./CoursesTab";
 import RepasosTab from "./RepasosTab";
@@ -73,6 +80,7 @@ function buildLessonsWithStatus(
  */
 export default function AppShell() {
   const { session } = useSession();
+  const isOnline = useOnline();
 
   const [activeTab, setActiveTab] = useState("cursos");
 
@@ -93,9 +101,31 @@ export default function AppShell() {
   const [courseLoading, setCourseLoading] = useState(false);
   const [courseError, setCourseError] = useState(false);
 
-  // Progreso real (localStorage optimista; se reconcilia con `certdeck_user_*`).
-  const [progress, setProgress] = useState<ProgressState>(() => getProgressState());
-  const refreshProgress = useCallback(() => setProgress(getProgressState()), []);
+  // Progreso real: estado OPTIMISTA en memoria (ADR 0006). La fuente de verdad
+  // es la BD; se carga al montar/cambiar sesión y se reconcilia al reconectar.
+  const [progress, setProgress] = useState<ProgressState>(emptyState);
+  // `connectionLost` se activa cuando falla una ESCRITURA write-through; junto a
+  // `!isOnline` determina el aviso superior y el bloqueo de iniciar lecciones.
+  const [connectionLost, setConnectionLost] = useState(false);
+  const offline = !isOnline || connectionLost;
+
+  const loadProgress = useCallback(async () => {
+    try {
+      setProgress(await getProgress());
+      setConnectionLost(false);
+    } catch {
+      setConnectionLost(true);
+    }
+  }, []);
+
+  const userId = session?.user?.id ?? null;
+
+  // Carga/reconciliación del progreso desde la BD: al iniciar sesión y cada vez
+  // que se recupera la conexión (reconcilia el optimismo con la verdad real).
+  useEffect(() => {
+    if (!userId || !isOnline) return;
+    void loadProgress();
+  }, [userId, isOnline, loadProgress]);
 
   // --- Carga del catálogo de cursos ---------------------------------------
   useEffect(() => {
@@ -166,6 +196,7 @@ export default function AppShell() {
 
   // --- Acciones -----------------------------------------------------------
   const handleStartLesson = (lessonId: string) => {
+    if (offline) return; // Sin conexión no se inician nuevas lecciones (ADR 0006).
     setReviewQuestions([]);
     setCurrentLessonId(lessonId);
     setIsReviewSession(false);
@@ -173,6 +204,7 @@ export default function AppShell() {
   };
 
   const handleStartReview = async (type: string) => {
+    if (offline) return; // Sin conexión no se inician nuevos repasos (ADR 0006).
     if (!courseData || !activeStage) return;
 
     const stageLessonIds = new Set(
@@ -207,9 +239,9 @@ export default function AppShell() {
   };
 
   const handleResetProgress = () => {
-    resetProgress();
-    refreshProgress();
+    setProgress(emptyState()); // Optimista: vacía la UI de inmediato.
     setActiveTab("cursos");
+    void resetProgress().catch(() => setConnectionLost(true));
   };
 
   const handleClosePlayer = (
@@ -218,12 +250,15 @@ export default function AppShell() {
   ) => {
     if (completed && result) {
       if (isReviewSession) {
-        recordReviewSession(result);
+        // Optimista en memoria + write-through autoritativo a la BD (ADR 0006).
+        setProgress((prev) => applyReviewSession(prev, result));
+        const type = (reviewType || "general-review") as ReviewType;
+        void recordReview(type, result).catch(() => setConnectionLost(true));
       } else if (currentLessonId) {
-        // Persiste local (inmediato) + Edge Function autoritativa (background).
-        void completeLesson(currentLessonId, result);
+        const lessonId = currentLessonId;
+        setProgress((prev) => applyLessonCompleted(prev, lessonId, result));
+        void completeLesson(lessonId, result).catch(() => setConnectionLost(true));
       }
-      refreshProgress();
     }
 
     setCurrentLessonId(null);
@@ -315,6 +350,15 @@ export default function AppShell() {
   return (
     <div className="h-full sm:h-auto sm:min-h-screen w-full bg-slate-100 flex justify-center items-center py-0 sm:py-6 px-0 sm:px-4">
       <div className="w-full max-w-md h-full sm:h-auto sm:min-h-[850px] sm:max-h-[880px] bg-slate-50 relative flex flex-col rounded-none sm:rounded-[40px] shadow-none sm:shadow-2xl border border-transparent sm:border-slate-100 overflow-hidden">
+        {/* Aviso de pérdida de conexión (ADR 0006): el progreso no se guarda y
+            no se pueden iniciar nuevas lecciones hasta recuperar la red. */}
+        {offline && (
+          <div className="shrink-0 flex items-center justify-center gap-2 bg-rose-500 text-white text-[11px] font-bold px-4 py-2 text-center leading-tight">
+            <WifiOff className="w-3.5 h-3.5 shrink-0" />
+            Sin conexión: tu progreso no se guardará y no puedes empezar lecciones nuevas.
+          </div>
+        )}
+
         {/* Cabecera (oculta dentro de la lección) */}
         {currentLessonId === null && (
           <header className="px-5 pt-5 pb-1 flex justify-between items-center bg-white border-b border-slate-50 shrink-0">

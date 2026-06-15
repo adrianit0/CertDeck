@@ -144,6 +144,40 @@
 
 ---
 
+## 3ter. v1 — Migración de persistencia a BD (ADR 0006)
+
+> Elimina toda persistencia local del **progreso** (`certdeck:progress`) y la traslada a la BD como única fuente de verdad, con estado optimista **en memoria** + write-through y manejo de red (banner + bloqueo de nueva lección). El tema (`certdeck:theme`) y la sesión (JWT) **siguen siendo locales**. SQL/Edge entregados, **no** aplicados por el agente (§4).
+
+### 3ter.1 SQL
+| ID | Tipo | Tarea | Archivos | Cubre |
+|---|---|---|---|---|
+| T-v1-035 | sql | `certdeck_user_lesson_progress`: **+columnas** `xp`, `anki_count` (CHECK `>= 0`) | `supabase/sql/script-005.sql` | ADR 0006, RF-30 |
+| T-v1-036 | sql | **Nueva** `certdeck_user_review_sessions` (xp/total/correct/anki por sesión de repaso) + índices + RLS propia | `supabase/sql/script-005.sql` | ADR 0006, RN-13…17 |
+| T-v1-037 | sql | **Nueva** `certdeck_user_failed_questions` (`unique(user_id, question_id)`, lesson_id) + RLS (select/insert/delete propios) | `supabase/sql/script-005.sql` | ADR 0006, RN-17 |
+
+### 3ter.2 Backend (Edge Functions)
+| ID | Tipo | Tarea | Archivos | Cubre |
+|---|---|---|---|---|
+| T-v1-038 | backend | **Nueva** `certdeck-progress-get` (GET): ensambla y devuelve el `ProgressState` completo (lecciones + review agregado + failed + días activos) | `supabase/functions/certdeck-progress-get/` | ADR 0006 |
+| T-v1-039 | backend | **Modificar** `certdeck-progress-complete-lesson`: persistir `xp`/`anki_count` y reconciliar `failed_questions` (alta fallos / baja recuperados) | `supabase/functions/certdeck-progress-complete-lesson/index.ts` | ADR 0006 |
+| T-v1-040 | backend | **Nueva** `certdeck-progress-record-review` (POST): inserta sesión de repaso + reconcilia `failed_questions` | `supabase/functions/certdeck-progress-record-review/` | ADR 0006 |
+| T-v1-041 | backend | **Nueva** `certdeck-progress-reset` (POST): borra todo el progreso del usuario | `supabase/functions/certdeck-progress-reset/` | ADR 0006 |
+
+### 3ter.3 Frontend
+| ID | Tipo | Tarea | Archivos | Cubre |
+|---|---|---|---|---|
+| T-v1-042 | frontend | **Eliminar** `localProgress.ts` (persistencia en disco); mover las funciones puras (estado de desbloqueo, racha, stats) a un módulo sin `localStorage` | `app/lib/progress/*` | ADR 0006 |
+| T-v1-043 | frontend | `lib/queries/progress.ts`: `getProgress`/`completeLesson`/`recordReview`/`resetProgress` contra las Edge Functions | `app/lib/queries/progress.ts` | ADR 0006 |
+| T-v1-044 | frontend | `AppShell`: cargar progreso de BD al montar/cambiar sesión; estado optimista **en memoria**; write-through | `app/features/shell/AppShell.tsx` | ADR 0006, RNF-02 |
+| T-v1-045 | frontend | Detección de red + **banner de "sin conexión"** y **bloqueo de iniciar lección/repaso** offline | `app/features/shell/*`, `app/hooks/useOnline.ts` | ADR 0006 |
+
+### 3ter.4 Docs
+| ID | Tipo | Tarea | Archivos | Cubre |
+|---|---|---|---|---|
+| T-v1-046 | docs | ADR 0006 + instrucciones manuales de `script-005.sql` y despliegue de Edge Functions | `docs/00-decisions/0006-*.md`, `docs/05-implementation/implementation.md` | §4 |
+
+---
+
 ## 4. v2 — Repaso espaciado + correcciones
 
 ### 4.1 SQL
@@ -207,11 +241,13 @@
 **Scripts SQL previstos** (numeración incremental, archivos nuevos):
 - `script-001.sql` — contenido (v0)
 - `script-002.sql` — preguntas + progreso + RLS (v1)
-- `script-003.sql` — seed de ejemplo (v1)
-- `script-004.sql` — repetición espaciada (v2)
+- `script-003.sql` — progreso de usuario + RLS (v1)
+- `script-004.sql` — limpieza del modelo de juego + `text_input` (v1)
+- `script-005.sql` — migración de persistencia a BD: `xp`/`anki_count`, `certdeck_user_review_sessions`, `certdeck_user_failed_questions` (v1, ADR 0006)
 
 **Edge Functions nuevas previstas:**
-- `certdeck-progress-complete-lesson` (v1)
+- `certdeck-progress-complete-lesson` (v1; ampliada en ADR 0006)
+- `certdeck-progress-get` · `certdeck-progress-record-review` · `certdeck-progress-reset` (v1, ADR 0006)
 - `certdeck-spaced-review-update` (v2)
 - `certdeck-review-build-lesson` (v2)
 - `certdeck-exam-grade` (v3, opcional)
@@ -238,3 +274,4 @@ Aprobada cuando el propietario confirma:
 |---|---|---|
 | 1.0.0 | 2026-06-15 | Versión inicial de Tareas (Fase 4). Pendiente de aprobación. |
 | 1.1.0 | 2026-06-15 | Añadida §3bis (revisión Requisitos 1.2.0): barra inferior + curso/etapa activos (ADR 0004), lección a pantalla completa (botones abajo, fuente mayor, Markdown negrita), ronda de corrección, base de examen, revisión de contenido; v2 alineada con composición dinámica (ADR 0005). |
+| 1.2.0 | 2026-06-15 | Añadida §3ter (ADR 0006): migración de la persistencia del progreso a la BD — `script-005.sql`, Edge Functions de progreso (get/record-review/reset + complete-lesson ampliada), estado optimista en memoria y manejo offline (T-v1-035…046). |

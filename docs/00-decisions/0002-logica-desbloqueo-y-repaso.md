@@ -1,6 +1,6 @@
 # ADR 0002 — Ubicación de la lógica de desbloqueo y repaso espaciado
 
-- **Estado:** Aceptada
+- **Estado:** Aceptada — **parcialmente enmendada por [ADR 0006](0006-persistencia-progreso-en-bd.md)** (la "capa optimista local" pasa a ser optimista **en memoria**, sin persistencia en disco; la BD es la única fuente de verdad del progreso).
 - **Fecha:** 2026-06-15
 - **Fase:** 3 — Hoja de ruta (resuelve Q-05)
 - **Decisores:** Propietario del proyecto
