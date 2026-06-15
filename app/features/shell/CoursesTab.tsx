@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronDown,
   Lock,
@@ -77,6 +77,14 @@ export default function CoursesTab({
       break;
     }
   }
+
+  // Al entrar en la pestaña "Cursos" (este componente se remonta al cambiar de
+  // pestaña) el foco vuelve siempre a la lección actual: la desplazamos al
+  // centro de la vista. Si no hay lección actual (todo completado), no hace nada.
+  const currentLessonRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    currentLessonRef.current?.scrollIntoView({ block: "center", behavior: "auto" });
+  }, []);
 
   const getLessonTypeIcon = (type: LessonType, status: LessonStatus) => {
     const color = status === "locked" ? "text-slate-400" : "text-brand-primary";
@@ -255,6 +263,7 @@ export default function CoursesTab({
                         return (
                           <div
                             key={lesson.id}
+                            ref={isCurrent ? currentLessonRef : undefined}
                             className={`rounded-2xl border p-4 transition-all duration-300 relative ${
                               isCurrent
                                 ? "bg-amber-50 border-amber-300 z-10 animate-breathe"
