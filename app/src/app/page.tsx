@@ -1,10 +1,10 @@
-import AppShell from "@/features/shell/AppShell";
+import AuthGate from "@/features/auth/AuthGate";
 
 /**
- * Punto de entrada de CertDeck: shell con barra de navegación inferior
- * (Cursos / Repasos / Progresos / Perfil) y reproductor de lección a pantalla
- * completa, fiel al mockup de diseño. Export estático (ADR 0003).
+ * Punto de entrada de CertDeck: puerta de autenticación (login vía Edge
+ * Function `auth-login`) que, con sesión válida, muestra el shell con barra de
+ * navegación inferior y reproductor de lección. Export estático (ADR 0003).
  */
 export default function HomePage() {
-  return <AppShell />;
+  return <AuthGate />;
 }

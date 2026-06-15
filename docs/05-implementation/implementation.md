@@ -221,6 +221,51 @@ Recorrido de aprendizaje funcional de extremo a extremo: catálogo → curso →
 
 ---
 
+## Todas las llamadas a datos vía Edge Functions (2026-06-15)
+
+> Regla de arquitectura: **toda llamada a datos pasa por una Edge Function**; el cliente nunca consulta las tablas directamente. **Un recurso = una función**; el método HTTP distingue la operación (se reutiliza la misma función solo para la misma llamada con distinto verbo HTTP).
+
+### Funciones nuevas (Deno, autocontenidas, prefijo `certdeck-`)
+Una por cada llamada de lectura que hacía el cliente directamente:
+- `certdeck-courses` (GET) — listado de cursos.
+- `certdeck-stages-with-topics` (GET `?course_id`) — etapas con sus temas.
+- `certdeck-lessons-by-topic` (GET `?topic_id`) — lecciones de un tema.
+- `certdeck-playable-lesson` (GET `?lesson_id`) — lección + pantallas + preguntas.
+- `certdeck-questions-by-lessons` (GET `?lesson_ids`) — preguntas para repasos por tema/general.
+- `certdeck-questions-by-ids` (GET `?ids`) — preguntas para repasos de errores.
+
+Cada una: CORS propio, verificación del JWT del usuario y cliente con RLS (`auth.uid()`), respuesta `{ data }` y `{ error }` (Constitución §4, estilo de `certdeck-progress-complete-lesson`). README por función. **El agente no las despliega**; lo hace el propietario con `supabase functions deploy <nombre>`.
+
+La escritura `completeLesson` ya pasaba por `certdeck-progress-complete-lesson` (POST), sin cambios.
+
+### Cliente
+- Nuevo `app/lib/edge/invoke.ts`: punto único de acceso. `fetch` a `/functions/v1/<fn>` con método, query params (arrays repetidos) y cabeceras `Authorization` (JWT de la sesión) + `apikey`. Desempaqueta `{ data }` y normaliza errores.
+- `app/lib/queries/content.ts`: reescrito para llamar a las funciones vía `invokeEdge` (sin `getSupabaseClient().from(...)`). Eliminadas las consultas muertas `getCourseBySlug` y `getTopic`.
+
+> **Auth**: `auth.getSession` / `onAuthStateChange` siguen en el cliente (subsistema GoTrue, no son consultas a tablas). El JWT debe vivir en el cliente para autorizar las llamadas a las funciones. Login/registro ya son Edge Functions externas.
+
+### Validación local
+- `typecheck`, `lint`, `test` (17) y `build` (export estático) en verde. Las funciones Deno no se typeckean en este repo (sin Deno local); replican la estructura de la función existente.
+
+---
+
+## Login con persistencia de sesión vía Edge Function (2026-06-15)
+
+> La app exige sesión: el contenido (RLS `authenticated`) y todas las Edge Functions de datos requieren un JWT. Se añade el flujo de **login** autenticando en la Edge Function compartida `auth-login` y **persistiendo** la sesión en el cliente.
+
+### Flujo
+- `app/lib/auth/login.ts`: `login(email, password)` llama a `auth-login` (POST), y con la sesión devuelta hace `auth.setSession({ access_token, refresh_token })`. Eso persiste el JWT (`persistSession`) y dispara `SIGNED_IN`; a partir de ahí las llamadas a las funciones de datos viajan autenticadas. `logout()` usa `auth.signOut()`.
+- `app/features/auth/LoginScreen.tsx`: formulario (email/contraseña) con estados de envío/error, con el estilo del shell.
+- `app/features/auth/AuthGate.tsx`: con `useSession`, muestra spinner mientras resuelve, `LoginScreen` si no hay sesión y `AppShell` si la hay. `src/app/page.tsx` ahora renderiza `<AuthGate/>`.
+- `PerfilTab`: botón **Cerrar sesión** (`onLogout` → `logout()`); al cerrar, `AuthGate` vuelve al login automáticamente.
+
+> No se toca `auth-register` (es específico de otro proyecto: tablas `rol`/`profiles`). El registro queda fuera de este cambio.
+
+### Validación local
+- `typecheck`, `lint` y `build` (export estático) en verde.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -228,3 +273,5 @@ Recorrido de aprendizaje funcional de extremo a extremo: catálogo → curso →
 | 1.0.0 | 2026-06-15 | Bitácora inicial con iteración v0 (fundaciones del frontend). |
 | 1.1.0 | 2026-06-15 | Maquetación de UI a partir del mockup: Tailwind v4 + lucide-react, shell con barra inferior (ADR 0004) y reproductor de lección; UI v1 retirada. Solo diseño; datos mock pendientes de cablear. |
 | 1.2.0 | 2026-06-15 | Cableado de contenido y progreso reales: se retira `mockData`; el shell consume `lib/queries` (Supabase) y el progreso real (local optimista + Edge Function). Métricas reales (XP, racha, errores). |
+| 1.3.0 | 2026-06-15 | Toda llamada a datos pasa por Edge Functions: 6 funciones de lectura nuevas (`certdeck-*`), helper cliente `lib/edge/invoke.ts` y `content.ts` reescrito sin acceso directo a tablas. |
+| 1.4.0 | 2026-06-15 | Login con persistencia de sesión vía Edge Function `auth-login` (`lib/auth/login`, `LoginScreen`, `AuthGate`) + cerrar sesión en Perfil. |

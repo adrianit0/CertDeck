@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, Moon, Bell, HelpCircle, BookOpen, Check } from "lucide-react";
+import { User, Moon, Bell, HelpCircle, BookOpen, Check, LogOut } from "lucide-react";
 import type { Course, UserStats } from "@/lib/types";
 
 interface PerfilTabProps {
@@ -10,6 +10,7 @@ interface PerfilTabProps {
   activeCourse: Course;
   setActiveCourseId: (id: string) => void;
   onResetProgress: () => void;
+  onLogout: () => void;
   userName: string;
   userEmail: string | null;
 }
@@ -20,6 +21,7 @@ export default function PerfilTab({
   activeCourse,
   setActiveCourseId,
   onResetProgress,
+  onLogout,
   userName,
   userEmail,
 }: PerfilTabProps) {
@@ -163,6 +165,15 @@ export default function PerfilTab({
           })}
         </div>
       </div>
+
+      {/* Sesión */}
+      <button
+        id="btn-logout"
+        onClick={onLogout}
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-white border border-slate-100 text-xs font-bold text-slate-600 hover:bg-slate-50 active:scale-[0.99] transition-all shadow-[0_4px_12px_rgba(0,0,0,0.015)]"
+      >
+        <LogOut className="w-4 h-4" /> Cerrar sesión
+      </button>
 
       {/* Reset */}
       <div className="space-y-2">

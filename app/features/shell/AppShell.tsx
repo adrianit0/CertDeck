@@ -18,6 +18,7 @@ import {
   getQuestionsByIds,
 } from "@/lib/queries/content";
 import { completeLesson } from "@/lib/queries/progress";
+import { logout } from "@/lib/auth/login";
 import {
   getProgressState,
   computeLessonStatus,
@@ -302,6 +303,7 @@ export default function AppShell() {
             activeCourse={activeCourse}
             setActiveCourseId={setActiveCourseId}
             onResetProgress={handleResetProgress}
+            onLogout={() => void logout()}
             userName={userName}
             userEmail={userEmail}
           />
