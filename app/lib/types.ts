@@ -69,6 +69,32 @@ export interface StageWithTopics extends Stage {
   topics: Topic[];
 }
 
+/** Lección con su estado de desbloqueo (vista de catálogo / prototipo de UI). */
+export interface LessonWithStatus extends Lesson {
+  status: LessonStatus;
+}
+
+/** Resultado de completar una lección (conteos y porcentaje de acierto). */
+export interface LessonResult {
+  correctCount: number;
+  incorrectCount: number;
+  scorePercentage: number;
+}
+
+/**
+ * Métricas de usuario para la cabecera y la pestaña de Progresos.
+ * En el prototipo de UI son datos mock; se conectarán al progreso real
+ * (certdeck_user_*) a medida que avance el roadmap.
+ */
+export interface UserStats {
+  xp: number;
+  streak: number;
+  lessonsCompleted: number;
+  totalAnswers: number;
+  correctAnswers: number;
+  ankiCardsStudied: number;
+}
+
 /** Lección lista para reproducir: pantallas + preguntas. */
 export interface PlayableLesson {
   lesson: Lesson;

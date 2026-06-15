@@ -2,7 +2,7 @@
 
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { markLessonCompleted } from "@/lib/progress/localProgress";
-import type { LessonResult } from "@/features/lesson/LessonPlayer";
+import type { LessonResult } from "@/lib/types";
 
 /**
  * Persiste la finalización de una lección.

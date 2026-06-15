@@ -178,8 +178,34 @@ Recorrido de aprendizaje funcional de extremo a extremo: catálogo → curso →
 
 ---
 
+## Maquetación de UI a partir del mockup (2026-06-15)
+
+> **Solo UI (sin lógica real).** Se adapta toda la app al **mockup de diseño** de Google AI Studio (`.localResources/src`), reproduciendo el modelo de navegación del ADR 0004. Los datos son **mock**; la conexión a Supabase (`lib/queries`) y el progreso real se conectarán a medida que avance el roadmap.
+
+### Decisiones técnicas
+- **Tailwind CSS v4** + **lucide-react** como sistema visual (el mockup está hecho con ellos). Tokens de marca en `styles/globals.css` vía `@theme` (azul/celeste/blanco); PostCSS con `@tailwindcss/postcss`.
+- **SPA de una sola página con pestañas** (Cursos/Repasos/Progresos/Perfil) + reproductor de lección a pantalla completa (modo concentración, barra inferior oculta), coherente con export estático (ADR 0003).
+
+### Archivos creados (`app/features/shell/`)
+- `AppShell.tsx` (contenedor + cabecera + barra inferior + overlay de lección), `Navigation.tsx`, `CoursesTab.tsx`, `RepasosTab.tsx`, `ProgresosTab.tsx`, `PerfilTab.tsx`, `LessonPlayer.tsx` (ANKI con volteo 3D, test, V/F, respuesta escrita, ronda de corrección y resultados), `mockData.ts`.
+- `src/app/page.tsx` ahora renderiza `<AppShell/>`. `styles/globals.css` reescrito para Tailwind v4. `lib/types.ts`: `LessonWithStatus`, `UserStats`, `LessonResult`.
+
+### Archivos eliminados (UI v1 superseded por el nuevo diseño)
+- Rutas `src/app/{courses,course,topic,lesson,progress}`; pantallas `features/content/*`, `features/progress/*`; `features/lesson/{LessonPlayer,LessonScreen,exercises/*,lesson.module.css}`; `components/ui/*`; `styles/tokens.css`.
+- **Conservado** para la futura lógica: `lib/*` (queries, supabase, progreso, sesión), `hooks/*` y `features/lesson/engine/*` (lógica pura testeada de opciones y respuesta de texto).
+
+### Pendiente (a conectar según roadmap)
+- Sustituir `mockData` por `lib/queries` (contenido real) y el progreso por `certdeck_user_*` + Edge Functions (ADR 0002).
+- Reutilizar `engine/textAnswer` y `engine/options` en el nuevo `LessonPlayer` al cablear la lógica real.
+
+### Validación local
+- `typecheck`, `lint`, `test` (17) y `build` (export estático) en verde; tokens de marca y clases auxiliares (volteo 3D) presentes en el CSS exportado.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
 |---|---|---|
 | 1.0.0 | 2026-06-15 | Bitácora inicial con iteración v0 (fundaciones del frontend). |
+| 1.1.0 | 2026-06-15 | Maquetación de UI a partir del mockup: Tailwind v4 + lucide-react, shell con barra inferior (ADR 0004) y reproductor de lección; UI v1 retirada. Solo diseño; datos mock pendientes de cablear. |

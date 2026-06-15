@@ -1,41 +1,59 @@
-@import "./tokens.css";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
 
-* {
-  box-sizing: border-box;
+/**
+ * CertDeck — sistema de diseño (Tailwind v4).
+ * Tokens de marca alineados con el mockup de Google AI Studio (.localResources).
+ * Paleta azul/celeste/blanco, mobile-first (RNF-01/07).
+ */
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-brand-primary: #2563eb;
+  --color-brand-primary-hover: #1d4ed8;
+  --color-brand-primary-light: #eff6ff;
+  --color-brand-accent: #38bdf8;
+  --color-bg-main: #f8fafc;
+  --color-bg-card: #ffffff;
+  --color-success-green: #10b981;
+  --color-success-bg: #ecfdf5;
+  --color-error-red: #ef4444;
+  --color-error-bg: #fef2f2;
+  --color-warning-amber: #f59e0b;
+  --color-warning-bg: #fffbeb;
 }
 
-html,
 body {
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: var(--cd-font);
-  color: var(--cd-ink-900);
-  background: var(--cd-bg);
-  font-size: var(--cd-text-base);
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  /* Respeta el notch / áreas seguras en móvil (Capacitor) */
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-main);
+  color: #1e293b;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  /* Respeta el notch / áreas seguras en móvil (Capacitor). */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
 }
 
-/* Accesibilidad: foco siempre visible (RA-03) */
-:focus-visible {
-  outline: 3px solid var(--cd-blue-400);
-  outline-offset: 2px;
+/* Clases de volteo 3D para la tarjeta ANKI. */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
 }
 
-h1,
-h2,
-h3 {
-  color: var(--cd-blue-900);
-  line-height: 1.25;
-  margin: 0 0 var(--cd-space-3);
+/* Oculta la barra de scroll manteniendo el desplazamiento. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-
-button {
-  font-family: inherit;
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
