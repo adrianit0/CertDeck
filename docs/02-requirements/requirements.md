@@ -169,6 +169,7 @@
 - **RNF-01** Mobile-first: la experiencia se diseña primero para móvil (app híbrida vía Capacitor).
 - **RNF-02** Sesiones cortas: una lección típica se completa en pocos minutos; la UI carga rápido y sin bloqueos perceptibles.
 - **RNF-03** La app funciona como web (Next.js) y empaquetada con Capacitor sin reescritura de lógica.
+- **RNF-17** **Caché de contenido en cliente** (ADR 0009): el catálogo de un curso (etapas + temas + lecciones) se guarda localmente y, al arrancar, solo se vuelve a descargar si un endpoint ligero de **versión** (`certdeck-content-version`) indica que cambió. Reduce el tiempo de carga cuando el contenido es voluminoso y estable. La caché solo guarda **contenido público de solo lectura** (nunca progreso del usuario; el progreso sigue la regla del ADR 0006).
 
 ### 4.2 Usabilidad y accesibilidad
 - **RNF-04** Contraste de texto y controles objetivo **WCAG AA**.
@@ -487,3 +488,4 @@ Esta fase se considera **aprobada** cuando el propietario confirma que:
 | 1.2.0 | 2026-06-15 | Revisión mayor: barra de navegación inferior (Cursos/Repasos/Progresos/Perfil), curso/etapa activos (§3.1, RN-27/28, ADR 0004); tema solo nombre sin resumen (RF-05); ronda de corrección (§3.6bis, RN-17); composición dinámica de repaso/errores/finales reciclando preguntas, solo `normal`/examen con preguntas propias (§3.9, RN-21…26, ADR 0005); lección a pantalla completa con botones abajo, fuente mayor y Markdown negrita (§3.12, RF-50…53). |
 | 1.3.0 | 2026-06-15 | Limpieza del modelo de juego: lecciones sin `estimated_minutes`; preguntas flashcard sin `position` (orden aleatorio) ni `difficulty` (RN-09b). Nuevo tipo de ejercicio **`text_input`** (respuesta escrita con comprobación tolerante y pista) (§3.5bis, RF-23a…c, RN-09c, §10.1) y nuevo [catálogo de tipos de ejercicio](../06-referencias/tipos-de-ejercicio.md). SQL: `script-004.sql`. |
 | 1.4.0 | 2026-06-16 | **Reporte de errores en tarjetas** (asistencia técnica): botón en todas las tarjetas + mini-popup con combo de motivo y detalle libre; persistencia para gestión posterior del propietario (§3.13, RF-54…57, RSP-08, §11; ADR 0008). SQL: `script-007.sql`; Edge Function: `certdeck-report-create`. |
+| 1.5.0 | 2026-06-16 | **Caché de contenido en cliente** (RNF-17, ADR 0009): el catálogo del curso se guarda en local y solo se redescarga si cambia el token de versión que devuelve `certdeck-content-version`. SQL: `script-008.sql` (función `certdeck_course_catalog_version`). |

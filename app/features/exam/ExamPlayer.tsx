@@ -118,7 +118,17 @@ export default function ExamPlayer({ questions, courseTitle, onClose }: ExamPlay
           <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Práctica de Examen</span>
           <h2 className="text-xs font-bold text-slate-700 leading-tight truncate">{courseTitle}</h2>
         </div>
-        <div className="w-10 h-10" />
+        {!finished ? (
+          <ReportControl
+            questionId={current.id}
+            questionSource="exam"
+            questionText={current.question}
+            lessonId={current.lessonId}
+            courseId={current.courseId}
+          />
+        ) : (
+          <div className="w-10 h-10" />
+        )}
       </header>
 
       {!finished && (
@@ -131,20 +141,10 @@ export default function ExamPlayer({ questions, courseTitle, onClose }: ExamPlay
         {!finished ? (
           <div className="flex flex-col h-full justify-between gap-6 py-2">
             <div className="space-y-5">
-              <div className="flex justify-between items-center gap-2">
+              <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase bg-slate-100 px-2.5 py-1 rounded-md">
                   Pregunta {index + 1} de {total}
                 </span>
-                <ReportControl
-                  questionId={current.id}
-                  questionSource="exam"
-                  questionText={current.question}
-                  lessonId={current.lessonId}
-                  courseId={current.courseId}
-                />
-              </div>
-
-              <div className="flex justify-end">
                 <span className="text-[10px] text-brand-accent font-black">
                   {isMultiple ? "RESPUESTA MÚLTIPLE" : "RESPUESTA ÚNICA"}
                 </span>

@@ -99,7 +99,7 @@ export default function ReportControl({
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-brand-primary-light flex items-center justify-center text-brand-primary">
-                  <LifeBuoy className="w-4 h-4" />
+                  <Headset className="w-4 h-4" />
                 </div>
                 <h3 className="font-black text-slate-800 text-sm tracking-tight">Asistencia técnica</h3>
               </div>

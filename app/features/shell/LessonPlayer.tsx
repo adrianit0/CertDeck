@@ -434,7 +434,17 @@ export default function LessonPlayer({
           </h2>
         </div>
 
-        <div className="w-10 h-10" />
+        {(playerStep === "exercises" || playerStep === "corrections") && activeQuestion ? (
+          <ReportControl
+            questionId={activeQuestion.id}
+            questionSource="flashcard"
+            questionText={activeQuestion.question}
+            lessonId={activeQuestion.lesson_id}
+            courseId={activeCourseId}
+          />
+        ) : (
+          <div className="w-10 h-10" />
+        )}
       </header>
 
       {/* Barra de progreso */}
@@ -491,20 +501,10 @@ export default function LessonPlayer({
         {(playerStep === "exercises" || playerStep === "corrections") && activeQuestion && (
           <div className="flex flex-col h-full justify-between gap-6 py-2">
             <div className="space-y-5">
-              <div className="flex justify-between items-center gap-2">
+              <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase bg-slate-100 px-2.5 py-1 rounded-md">
                   {playerStep === "corrections" ? "Ronda de Corrección" : `Pregunta ${exerciseIndex + 1} de ${totalExercises}`}
                 </span>
-                <ReportControl
-                  questionId={activeQuestion.id}
-                  questionSource="flashcard"
-                  questionText={activeQuestion.question}
-                  lessonId={activeQuestion.lesson_id}
-                  courseId={activeCourseId}
-                />
-              </div>
-
-              <div className="flex justify-end">
                 <span className="text-[10px] text-brand-accent font-black">
                   {activeQuestion.exercise_type === "anki_card" && "TARJETA ANKI"}
                   {activeQuestion.exercise_type === "multiple_choice" && "OPCIÓN MÚLTIPLE"}

@@ -19,7 +19,13 @@ import {
   getLessonsByTopic,
   getQuestionsByLessons,
   getQuestionsByIds,
+  getCourseContentVersion,
 } from "@/lib/queries/content";
+import {
+  readCatalogCache,
+  writeCatalogCache,
+  type CourseCatalog,
+} from "@/lib/cache/contentCache";
 import { getExamQuestions, gradeExam } from "@/lib/queries/exam";
 import {
   getProgress,
@@ -164,28 +170,63 @@ export default function AppShell() {
     };
   }, []);
 
-  // --- Carga del contenido del curso activo -------------------------------
+  // --- Carga del contenido del curso activo (con caché local, ADR 0009) ----
+  // El catálogo (etapas+temas+lecciones) apenas cambia y es voluminoso, así que
+  // se cachea en `localStorage`. En cada arranque solo se pide un TOKEN de
+  // versión ligero (`certdeck-content-version`); si coincide con el cacheado se
+  // usa la caché y se evita la descarga pesada (etapas/temas + N de lecciones).
   useEffect(() => {
     if (!activeCourseId) return;
+    const courseId = activeCourseId;
     let active = true;
     setCourseLoading(true);
     setCourseError(false);
+
+    const apply = (catalog: CourseCatalog) => {
+      if (!active) return;
+      setCourseData(catalog);
+      setActiveStageId(catalog.stages[0]?.id ?? null);
+      setCourseLoading(false);
+    };
+
+    const fetchCatalog = async (): Promise<CourseCatalog> => {
+      const stagesWithTopics = await getStagesWithTopics(courseId);
+      const stages: Stage[] = stagesWithTopics.map(({ topics: _topics, ...stage }) => stage);
+      const topics: Topic[] = stagesWithTopics.flatMap((s) => s.topics);
+      const lessonsByTopic = await Promise.all(topics.map((t) => getLessonsByTopic(t.id)));
+      return { stages, topics, lessons: lessonsByTopic.flat() };
+    };
+
     (async () => {
+      const cached = readCatalogCache(courseId);
+
+      // 1) Token de versión (ligero). Si falla (offline) caemos a la caché.
+      let version: string | null = null;
       try {
-        const stagesWithTopics = await getStagesWithTopics(activeCourseId);
-        const stages: Stage[] = stagesWithTopics.map(({ topics: _topics, ...stage }) => stage);
-        const topics: Topic[] = stagesWithTopics.flatMap((s) => s.topics);
-        const lessonsByTopic = await Promise.all(topics.map((t) => getLessonsByTopic(t.id)));
+        version = await getCourseContentVersion(courseId);
+      } catch {
+        if (cached) return apply(cached.catalog);
+      }
+
+      // 2) Caché vigente → sin descarga pesada.
+      if (version && cached && cached.version === version) {
+        return apply(cached.catalog);
+      }
+
+      // 3) Cache miss (o cambió la versión) → descarga y se guarda.
+      try {
+        const catalog = await fetchCatalog();
         if (!active) return;
-        setCourseData({ stages, topics, lessons: lessonsByTopic.flat() });
-        setActiveStageId(stages[0]?.id ?? null);
-        setCourseLoading(false);
+        apply(catalog);
+        if (version) writeCatalogCache(courseId, version, catalog);
       } catch {
         if (!active) return;
+        if (cached) return apply(cached.catalog); // último recurso: caché previa
         setCourseError(true);
         setCourseLoading(false);
       }
     })();
+
     return () => {
       active = false;
     };

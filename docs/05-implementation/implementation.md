@@ -586,6 +586,49 @@ propietario revise y corrija el contenido más adelante (RF-54…57, ADR 0008).
 
 ---
 
+## Iteración — Caché de contenido en cliente (2026-06-16)
+
+### 1. Resumen
+El catálogo del curso (etapas + temas + lecciones) se **cachea en `localStorage`**
+y, al arrancar, solo se vuelve a descargar si un endpoint ligero de **versión**
+indica que cambió. Elimina la carga pesada (etapas/temas + N de lecciones) en el
+caso común (contenido estable) — RNF-17, ADR 0009.
+
+### 2. Backend (entregado, NO aplicado/desplegado — §4)
+- **SQL:** `supabase/sql/script-008.sql` — función `certdeck_course_catalog_version(uuid)`
+  (security invoker → RLS aplica; token = `epoch(max updated_at).recuento` sobre
+  curso/etapas/temas/lecciones), con `grant execute` a `authenticated`.
+- **Edge Function:** `supabase/functions/certdeck-content-version/` (`index.ts` +
+  `README.md`) — GET `?course_id=`, una sola RPC.
+
+### 3. Frontend
+- `app/lib/cache/contentCache.ts` — caché `localStorage` del catálogo + token
+  (lectura/escritura/limpieza tolerantes a fallos de cuota).
+- `app/lib/queries/content.ts` — `getCourseContentVersion()`.
+- `app/features/shell/AppShell.tsx` — el efecto de carga del curso pide el token,
+  usa la caché si coincide y, si no, descarga y reescribe; degradación a caché si
+  hay error/offline.
+
+### 4. Decisión documentada
+- **ADR 0009** — caché de contenido con token de versión; ámbito (catálogo, no
+  preguntas), degradación y por qué no rompe el ADR 0006 (progreso sigue sin caché).
+
+### 5. Verificación (local)
+| Check | Comando | Resultado |
+|---|---|---|
+| Tipos | `npx tsc --noEmit` | ✅ |
+
+### 6. Instrucciones manuales para el propietario (§4)
+> **Proyecto Supabase fijo:** `wtkumfcjqqmgokgrbxxr` ("Prototipos Personales").
+
+1. **Aplicar SQL**: `supabase/sql/script-008.sql` (tras script-001…007). Idempotente.
+2. **Desplegar Edge Function**: `supabase functions deploy certdeck-content-version`.
+3. **Verificar**: cargar la app dos veces; la 1ª descarga el catálogo, la 2ª debe
+   resolverse con una sola llamada (`certdeck-content-version`) y carga casi
+   instantánea. Tras editar/añadir una lección, el token cambia y se redescarga.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -603,3 +646,4 @@ propietario revise y corrija el contenido más adelante (RF-54…57, ADR 0008).
 | 2.0.0 | 2026-06-16 | v2.2+v2.3: `certdeck-spaced-review-update` (persiste SM-2) + `certdeck-playable-lesson` compone por **vencimiento** (review/final/error_correction), reemplazando el modo posicional; wiring de `cardReviews` en LessonPlayer/AppShell; tarjeta problemática (Q-02) y oferta de corrección < 60% (Q-01). |
 | 3.0.0 | 2026-06-16 | **v3 completo**: práctica directa de examen (5ª pestaña) con conjunto exacto (RF-29), `certdeck-exam-questions`/`certdeck-exam-grade` (autoritativa, registra intento sin tocar SRS — Q-06/ADR 0007), `lib/exam.ts` puro + 14 tests; progreso enriquecido (avance por tema, repaso vencido/pendiente, histórico de examen) con agregados `srs`/`exam` en `certdeck-progress-get`; `expansion` reciclada en `certdeck-playable-lesson`; contenido de examen `20260616_04`. |
 | 3.1.0 | 2026-06-16 | **Reporte de errores en tarjetas** (asistencia técnica, ADR 0008 · RF-54…57): `ReportControl` (botón + popup con combo de motivo y detalle) en LessonPlayer y ExamPlayer, `lib/queries/reports.ts`; `script-007.sql` (`certdeck_user_question_reports` + RLS) y Edge Function `certdeck-report-create` (entregados, no aplicados). Además: fix de saltos de línea en pantallas de teoría, truncado del título de curso en la cabecera de lección e intercepción del botón atrás de hardware (confirmar salida de sesión, `@capacitor/app`). |
+| 3.2.0 | 2026-06-16 | **Caché de contenido en cliente** (RNF-17, ADR 0009): catálogo del curso en `localStorage` + token de versión; `AppShell` solo redescarga si cambia. `lib/cache/contentCache.ts`, `getCourseContentVersion`, `script-008.sql` (`certdeck_course_catalog_version`) y Edge Function `certdeck-content-version` (entregados, no aplicados). |

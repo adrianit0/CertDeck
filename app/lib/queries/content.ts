@@ -23,6 +23,17 @@ export async function getCourses(): Promise<Course[]> {
   return invokeEdge<Course[]>("certdeck-courses");
 }
 
+/**
+ * Token de versión del CATÁLOGO del curso (etapas + temas + lecciones). Llamada
+ * ligera: solo sirve para decidir si la caché local sigue vigente (ADR 0009).
+ */
+export async function getCourseContentVersion(courseId: string): Promise<string> {
+  const res = await invokeEdge<{ version: string }>("certdeck-content-version", {
+    query: { course_id: courseId },
+  });
+  return res?.version ?? "0.0";
+}
+
 /** Etapas del curso, cada una con sus temas, todo ordenado por posición. */
 export async function getStagesWithTopics(courseId: string): Promise<StageWithTopics[]> {
   return invokeEdge<StageWithTopics[]>("certdeck-stages-with-topics", {
