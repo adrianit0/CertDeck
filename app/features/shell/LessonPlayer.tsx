@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, Fragment, type ReactNode } from "react";
 import {
   X,
   ArrowRight,
@@ -453,9 +453,19 @@ export default function LessonPlayer({
               )}
 
               <div className="text-[16px] leading-relaxed text-slate-700 space-y-4 pt-4 font-medium tracking-wide">
-                {currentScreen.body.split("\n\n").map((para, pIdx) => (
-                  <p key={pIdx}>{formatMarkdownText(para)}</p>
-                ))}
+                {currentScreen.body.split("\n\n").map((para, pIdx) => {
+                  const lines = para.split("\n");
+                  return (
+                    <p key={pIdx}>
+                      {lines.map((line, lIdx) => (
+                        <Fragment key={lIdx}>
+                          {formatMarkdownText(line)}
+                          {lIdx < lines.length - 1 && <br />}
+                        </Fragment>
+                      ))}
+                    </p>
+                  );
+                })}
               </div>
             </div>
 
