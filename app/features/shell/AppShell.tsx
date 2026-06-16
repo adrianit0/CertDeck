@@ -315,6 +315,47 @@ export default function AppShell() {
     setReviewQuestions([]);
   };
 
+  // --- Botón "atrás" de hardware (Android/iOS) -----------------------------
+  // Por defecto Capacitor cierra la app al pulsar atrás. Si hay una sesión a
+  // pantalla completa (lección/repaso o examen) en curso, interceptamos y
+  // pedimos confirmación igual que la "X" superior; fuera de una sesión se
+  // mantiene el comportamiento por defecto (salir de la app).
+  const inLesson = currentLessonId !== null;
+  useEffect(() => {
+    let remove: (() => void) | undefined;
+    void (async () => {
+      try {
+        const { App } = await import("@capacitor/app");
+        const handle = await App.addListener("backButton", () => {
+          if (inLesson) {
+            if (
+              window.confirm(
+                "¿Seguro que quieres salir de la lección? Perderás el progreso de esta tanda.",
+              )
+            ) {
+              handleClosePlayer(false, null);
+            }
+          } else if (examActive) {
+            if (
+              window.confirm(
+                "¿Salir de la práctica de examen? Perderás el progreso de esta tanda.",
+              )
+            ) {
+              handleCloseExam(false, []);
+            }
+          } else {
+            void App.exitApp();
+          }
+        });
+        remove = () => void handle.remove();
+      } catch {
+        // En web (sin Capacitor nativo) no hay botón atrás de hardware: se ignora.
+      }
+    })();
+    return () => remove?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inLesson, examActive]);
+
   // --- Render -------------------------------------------------------------
   const renderContent = () => {
     if (coursesLoading) {
@@ -465,6 +506,7 @@ export default function AppShell() {
               reviewType={reviewType}
               reviewQuestions={reviewQuestions}
               activeCourseTitle={activeCourse.title}
+              activeCourseId={activeCourse.id}
               onClose={handleClosePlayer}
             />
           ) : examActive && activeCourse ? (

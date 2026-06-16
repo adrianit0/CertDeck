@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { LessonScreen, FlashcardQuestion, SessionResult } from "@/lib/types";
 import { getPlayableLesson } from "@/lib/queries/content";
+import ReportControl from "@/components/ReportControl";
 
 interface LessonPlayerProps {
   lessonId: string;
@@ -25,6 +26,7 @@ interface LessonPlayerProps {
   reviewQuestions?: FlashcardQuestion[];
   onClose: (completed: boolean, result: SessionResult | null) => void;
   activeCourseTitle: string;
+  activeCourseId?: string | null;
 }
 
 type PlayerStep = "content" | "exercises" | "correction_intro" | "corrections" | "results";
@@ -43,6 +45,7 @@ export default function LessonPlayer({
   reviewQuestions = [],
   onClose,
   activeCourseTitle,
+  activeCourseId = null,
 }: LessonPlayerProps) {
   const [screens, setScreens] = useState<LessonScreen[]>([]);
   const [questions, setQuestions] = useState<FlashcardQuestion[]>([]);
@@ -422,8 +425,8 @@ export default function LessonPlayer({
           <X className="w-5.5 h-5.5 stroke-[2.2]" />
         </button>
 
-        <div className="flex-1 text-center">
-          <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+        <div className="flex-1 text-center min-w-0 px-2">
+          <span className="block truncate text-[10px] font-black uppercase text-slate-400 tracking-wider">
             {isReviewSession ? "Sesión de Repaso" : activeCourseTitle}
           </span>
           <h2 className="text-xs font-bold text-slate-700 leading-tight truncate">
@@ -488,10 +491,20 @@ export default function LessonPlayer({
         {(playerStep === "exercises" || playerStep === "corrections") && activeQuestion && (
           <div className="flex flex-col h-full justify-between gap-6 py-2">
             <div className="space-y-5">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center gap-2">
                 <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase bg-slate-100 px-2.5 py-1 rounded-md">
                   {playerStep === "corrections" ? "Ronda de Corrección" : `Pregunta ${exerciseIndex + 1} de ${totalExercises}`}
                 </span>
+                <ReportControl
+                  questionId={activeQuestion.id}
+                  questionSource="flashcard"
+                  questionText={activeQuestion.question}
+                  lessonId={activeQuestion.lesson_id}
+                  courseId={activeCourseId}
+                />
+              </div>
+
+              <div className="flex justify-end">
                 <span className="text-[10px] text-brand-accent font-black">
                   {activeQuestion.exercise_type === "anki_card" && "TARJETA ANKI"}
                   {activeQuestion.exercise_type === "multiple_choice" && "OPCIÓN MÚLTIPLE"}

@@ -152,6 +152,15 @@
 - **RF-52** El **contenido** de las lecciones usa una **fuente algo más grande** y queda **repartido/espaciado** a lo largo de la pantalla (no amontonado arriba).
 - **RF-53** El texto de contenido soporta **negrita con `**…**`** (Markdown): los dobles asteriscos se renderizan en **negrita** dentro de la app.
 
+### 3.13 Reporte de errores en tarjetas (asistencia técnica)
+
+> Decisión del propietario (2026-06-16). Ver [ADR 0008](../00-decisions/0008-reporte-de-errores-en-tarjetas.md).
+
+- **RF-54** **Todas las tarjetas** de pregunta (flashcards de lección/repaso y preguntas de examen) muestran **arriba** un **botón de asistencia técnica** para reportar un problema con la tarjeta.
+- **RF-55** Al pulsarlo se abre un **mini-popup** con: (a) un **combo de motivo** (`Bug`, `Falta de ortografía`, `Respuesta incorrecta`, `Pregunta confusa`, `Otro`) y (b) un **campo de detalle** de texto libre **opcional**.
+- **RF-56** Al enviar, el reporte se **persiste** (tabla `user_question_reports`, vía la Edge Function `certdeck-report-create`) junto con la referencia de la pregunta (id + origen `flashcard`/`exam`), su contexto (lección/curso) y una **instantánea del enunciado**. El usuario recibe **confirmación** inmediata.
+- **RF-57** Los reportes se **almacenan para gestión posterior** del propietario (revisar/corregir/descartar); su `status` (`open`/`reviewing`/`resolved`/`dismissed`) lo administra el propietario, no el usuario final.
+
 ---
 
 ## 4. Requisitos no funcionales (RNF)
@@ -386,6 +395,7 @@ Tras completar una lección:
 - **Progreso:** se persiste en `user_lesson_progress` (estado, score, conteos, `completed_at`), `user_question_attempts` (cada intento) y `user_spaced_repetition` (estado por tarjeta).
 - **Errores del usuario:** cada fallo queda registrado como intento (`was_correct = false`) y, en tarjetas, afecta a `lapses`/condición problemática; esto alimenta lecciones de corrección y la selección de repasos.
 - **Antifrustración:** fallar repetidamente una tarjeta dentro de una lección no impide terminarla, pero el sistema recuerda el fallo para reforzarlo más adelante (RN-17).
+- **Reportes de error de contenido:** los reportes que el usuario envía desde una tarjeta se guardan en `user_question_reports` (privados del usuario que los crea, RLS), para que el propietario revise y corrija el contenido (RF-54…57, ADR 0008). No forman parte del progreso ni del repaso espaciado.
 
 ---
 
@@ -398,6 +408,7 @@ Tras completar una lección:
 - **RSP-05** Las claves sensibles no se incrustan en el cliente ni en el repositorio.
 - **RSP-06** No se modifican login/registro ni su CORS (restricción crítica de la Constitución).
 - **RSP-07** La arquitectura queda preparada para funciones premium/multiusuario sin comprometer el aislamiento por usuario.
+- **RSP-08** Los **reportes de error** (`user_question_reports`) llevan RLS: cada usuario solo crea y consulta los suyos (`auth.uid() = user_id`); el alta pasa por la Edge Function `certdeck-report-create` (validación en servidor, RSP-03) y la gestión/resolución es responsabilidad del propietario (service_role).
 
 ---
 
@@ -475,3 +486,4 @@ Esta fase se considera **aprobada** cuando el propietario confirma que:
 | 1.1.0 | 2026-06-15 | Integradas las decisiones Q-01…Q-06 (RN-06, RN-07, RN-13, RN-16, §16). Estado: aprobada. |
 | 1.2.0 | 2026-06-15 | Revisión mayor: barra de navegación inferior (Cursos/Repasos/Progresos/Perfil), curso/etapa activos (§3.1, RN-27/28, ADR 0004); tema solo nombre sin resumen (RF-05); ronda de corrección (§3.6bis, RN-17); composición dinámica de repaso/errores/finales reciclando preguntas, solo `normal`/examen con preguntas propias (§3.9, RN-21…26, ADR 0005); lección a pantalla completa con botones abajo, fuente mayor y Markdown negrita (§3.12, RF-50…53). |
 | 1.3.0 | 2026-06-15 | Limpieza del modelo de juego: lecciones sin `estimated_minutes`; preguntas flashcard sin `position` (orden aleatorio) ni `difficulty` (RN-09b). Nuevo tipo de ejercicio **`text_input`** (respuesta escrita con comprobación tolerante y pista) (§3.5bis, RF-23a…c, RN-09c, §10.1) y nuevo [catálogo de tipos de ejercicio](../06-referencias/tipos-de-ejercicio.md). SQL: `script-004.sql`. |
+| 1.4.0 | 2026-06-16 | **Reporte de errores en tarjetas** (asistencia técnica): botón en todas las tarjetas + mini-popup con combo de motivo y detalle libre; persistencia para gestión posterior del propietario (§3.13, RF-54…57, RSP-08, §11; ADR 0008). SQL: `script-007.sql`; Edge Function: `certdeck-report-create`. |

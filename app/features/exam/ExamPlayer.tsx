@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ExamAttempt, ExamQuestion } from "@/lib/types";
 import { gradeExamAnswer } from "@/lib/exam";
+import ReportControl from "@/components/ReportControl";
 
 interface ExamPlayerProps {
   questions: ExamQuestion[];
@@ -130,10 +131,20 @@ export default function ExamPlayer({ questions, courseTitle, onClose }: ExamPlay
         {!finished ? (
           <div className="flex flex-col h-full justify-between gap-6 py-2">
             <div className="space-y-5">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center gap-2">
                 <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase bg-slate-100 px-2.5 py-1 rounded-md">
                   Pregunta {index + 1} de {total}
                 </span>
+                <ReportControl
+                  questionId={current.id}
+                  questionSource="exam"
+                  questionText={current.question}
+                  lessonId={current.lessonId}
+                  courseId={current.courseId}
+                />
+              </div>
+
+              <div className="flex justify-end">
                 <span className="text-[10px] text-brand-accent font-black">
                   {isMultiple ? "RESPUESTA MÚLTIPLE" : "RESPUESTA ÚNICA"}
                 </span>

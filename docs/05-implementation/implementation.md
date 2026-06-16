@@ -532,6 +532,60 @@ estado de repaso espaciado (vencidas/por venir) e histórico de examen.
 
 ---
 
+## Iteración — Reporte de errores en tarjetas (asistencia técnica) (2026-06-16)
+
+### 1. Resumen
+Botón de **asistencia técnica** en todas las tarjetas de pregunta (flashcards de
+lección/repaso y preguntas de examen). Al pulsarlo abre un **mini-popup** con un
+combo de motivo (`Bug`, `Falta de ortografía`, `Respuesta incorrecta`, `Pregunta
+confusa`, `Otro`) y un campo de detalle libre. El reporte se persiste para que el
+propietario revise y corrija el contenido más adelante (RF-54…57, ADR 0008).
+
+### 2. Tareas cubiertas
+- Requisitos §3.13 (RF-54…57), RSP-08, §11; ADR 0008.
+
+### 3. Frontend
+- `app/components/ReportControl.tsx` — **componente reutilizable** (botón + popup,
+  estados idle/sending/success/error). Mobile-first, paleta de marca.
+- `app/lib/queries/reports.ts` — `submitQuestionReport()` (vía `invokeEdge`).
+- `app/lib/types.ts` — tipos `QuestionSource`, `ReportCategory`, `QuestionReportInput`.
+- Cableado en `LessonPlayer` (cabecera de la tarjeta de ejercicio; `activeCourseId`
+  añadido como prop desde `AppShell`) y en `ExamPlayer` (cabecera de la pregunta).
+
+### 4. Backend (entregado, NO aplicado/desplegado — §4)
+- **SQL:** `supabase/sql/script-007.sql` — tabla `certdeck_user_question_reports`
+  (sin FK a la pregunta: `question_source` + `question_id` + instantánea
+  `question_text`; `category`, `details`, `status`) con índices, trigger
+  `updated_at` y **RLS** (select/insert propios).
+- **Edge Function:** `supabase/functions/certdeck-report-create/` (`index.ts` +
+  `README.md`) — alta como usuario autenticado, validación de entrada en servidor.
+
+### 5. Decisión documentada
+- **ADR 0008** — Reporte de errores en tarjetas: por qué Edge Function (no insert
+  directo), por qué `source`+`id`+instantánea (no FK polimórfica) y alcance
+  (la gestión/resolución de reportes queda para más adelante).
+
+### 6. Verificación (local)
+| Check | Comando | Resultado |
+|---|---|---|
+| Tipos | `npx tsc --noEmit` | ✅ |
+> Las funciones Deno no entran en el build del frontend. El alta real depende de que
+> el propietario aplique `script-007.sql` y despliegue `certdeck-report-create`.
+
+### 7. Instrucciones manuales para el propietario (§4)
+> **Proyecto Supabase fijo:** `wtkumfcjqqmgokgrbxxr` ("Prototipos Personales").
+
+1. **Aplicar SQL**: `supabase/sql/script-007.sql` (tras script-001…006). Idempotente.
+2. **Desplegar Edge Function**:
+   ```bash
+   supabase functions deploy certdeck-report-create
+   ```
+3. **Verificar**: dentro de una lección o de la práctica de examen, pulsar
+   *Reportar* en una tarjeta → elegir motivo, escribir un detalle y enviar; debe
+   aparecer la confirmación y una fila nueva en `certdeck_user_question_reports`.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -548,3 +602,4 @@ estado de repaso espaciado (vencidas/por venir) e histórico de examen.
 | 1.9.0 | 2026-06-16 | v2.1: algoritmo SM-2 simplificado puro `app/lib/srs.ts` (Q-03 ajustable) + 12 tests, y `script-006.sql` (`certdeck_user_spaced_repetition` + RLS). El modo posicional se reemplazará por SM-2 en v2.2. |
 | 2.0.0 | 2026-06-16 | v2.2+v2.3: `certdeck-spaced-review-update` (persiste SM-2) + `certdeck-playable-lesson` compone por **vencimiento** (review/final/error_correction), reemplazando el modo posicional; wiring de `cardReviews` en LessonPlayer/AppShell; tarjeta problemática (Q-02) y oferta de corrección < 60% (Q-01). |
 | 3.0.0 | 2026-06-16 | **v3 completo**: práctica directa de examen (5ª pestaña) con conjunto exacto (RF-29), `certdeck-exam-questions`/`certdeck-exam-grade` (autoritativa, registra intento sin tocar SRS — Q-06/ADR 0007), `lib/exam.ts` puro + 14 tests; progreso enriquecido (avance por tema, repaso vencido/pendiente, histórico de examen) con agregados `srs`/`exam` en `certdeck-progress-get`; `expansion` reciclada en `certdeck-playable-lesson`; contenido de examen `20260616_04`. |
+| 3.1.0 | 2026-06-16 | **Reporte de errores en tarjetas** (asistencia técnica, ADR 0008 · RF-54…57): `ReportControl` (botón + popup con combo de motivo y detalle) en LessonPlayer y ExamPlayer, `lib/queries/reports.ts`; `script-007.sql` (`certdeck_user_question_reports` + RLS) y Edge Function `certdeck-report-create` (entregados, no aplicados). Además: fix de saltos de línea en pantallas de teoría, truncado del título de curso en la cabecera de lección e intercepción del botón atrás de hardware (confirmar salida de sesión, `@capacitor/app`). |

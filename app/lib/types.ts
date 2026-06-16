@@ -196,3 +196,26 @@ export interface ExamGradeSummary {
   correctCount: number;
   total: number;
 }
+
+// ---------------------------------------------------------------------------
+// Reporte de errores en tarjetas (asistencia técnica) — ADR 0008 / RF-30.
+// Tabla `certdeck_user_question_reports`, alta vía `certdeck-report-create`.
+// ---------------------------------------------------------------------------
+
+/** Origen de la pregunta reportada (define en qué catálogo vive). */
+export type QuestionSource = "flashcard" | "exam";
+
+/** Motivo del reporte (combo). */
+export type ReportCategory = "bug" | "spelling" | "wrong_answer" | "confusing" | "other";
+
+/** Datos que el cliente envía al reportar una tarjeta. */
+export interface QuestionReportInput {
+  questionId: string;
+  questionSource: QuestionSource;
+  category: ReportCategory;
+  details?: string | null;
+  lessonId?: string | null;
+  courseId?: string | null;
+  /** Instantánea del enunciado tal y como lo vio el usuario. */
+  questionText?: string | null;
+}
