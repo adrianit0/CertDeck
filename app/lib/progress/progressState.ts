@@ -32,11 +32,29 @@ export interface ReviewActivity {
   ankiCards: number;
 }
 
+/** Estado agregado de repetición espaciada (tarjetas con seguimiento SM-2). */
+export interface SrsSummary {
+  /** Tarjetas con estado de repaso creado. */
+  tracked: number;
+  /** Vencidas ahora mismo (due_at <= now). */
+  due: number;
+  /** Programadas para el futuro (due_at > now). */
+  upcoming: number;
+}
+
+/** Histórico de práctica de examen (intentos registrados, v3 · Q-06). */
+export interface ExamSummary {
+  attempts: number;
+  correct: number;
+}
+
 export interface ProgressState {
   lessons: Record<string, LessonProgress>;
   /** Preguntas pendientes de recuperar: id -> lessonId. */
   failedQuestions: Record<string, string>;
   review: ReviewActivity;
+  srs: SrsSummary;
+  exam: ExamSummary;
   /** Días (YYYY-MM-DD) con actividad, para calcular la racha. */
   activeDays: string[];
 }
@@ -46,6 +64,8 @@ export function emptyState(): ProgressState {
     lessons: {},
     failedQuestions: {},
     review: { xp: 0, totalAnswers: 0, correctAnswers: 0, ankiCards: 0 },
+    srs: { tracked: 0, due: 0, upcoming: 0 },
+    exam: { attempts: 0, correct: 0 },
     activeDays: [],
   };
 }
@@ -88,6 +108,21 @@ export function normalize(parsed: unknown): ProgressState {
       totalAnswers: typeof r.totalAnswers === "number" ? r.totalAnswers : 0,
       correctAnswers: typeof r.correctAnswers === "number" ? r.correctAnswers : 0,
       ankiCards: typeof r.ankiCards === "number" ? r.ankiCards : 0,
+    };
+  }
+  if (obj.srs && typeof obj.srs === "object") {
+    const s = obj.srs as Record<string, unknown>;
+    base.srs = {
+      tracked: typeof s.tracked === "number" ? s.tracked : 0,
+      due: typeof s.due === "number" ? s.due : 0,
+      upcoming: typeof s.upcoming === "number" ? s.upcoming : 0,
+    };
+  }
+  if (obj.exam && typeof obj.exam === "object") {
+    const e = obj.exam as Record<string, unknown>;
+    base.exam = {
+      attempts: typeof e.attempts === "number" ? e.attempts : 0,
+      correct: typeof e.correct === "number" ? e.correct : 0,
     };
   }
   if (Array.isArray(obj.activeDays)) {

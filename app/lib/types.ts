@@ -134,3 +134,65 @@ export interface PlayableLesson {
   screens: LessonScreen[];
   questions: FlashcardQuestion[];
 }
+
+// ---------------------------------------------------------------------------
+// Examen (v3) — catálogo especial `certdeck_exam_questions`, independiente de
+// las flashcards. type_id 1 = respuesta única, 2 = respuesta múltiple.
+// ---------------------------------------------------------------------------
+
+/** Tipo de examen: 1 = respuesta única, 2 = respuesta múltiple (RF-27). */
+export type ExamTypeId = 1 | 2;
+
+/**
+ * Una opción de respuesta de examen, ya DESORDENADA por el backend (RF-28/RN-10:
+ * el orden interno nunca se expone). `isCorrect` permite el feedback inmediato
+ * en cliente (RNF-14); la corrección autoritativa se reconfirma en servidor
+ * (`certdeck-exam-grade`, RF-29/RSP-03).
+ */
+export interface ExamAnswerOption {
+  text: string;
+  isCorrect: boolean;
+}
+
+/** Pregunta de examen lista para responder (respuestas ya barajadas). */
+export interface ExamQuestion {
+  id: string;
+  courseId: string;
+  topicId: string | null;
+  lessonId: string | null;
+  question: string;
+  typeId: ExamTypeId;
+  /** Opciones ya desordenadas. Para múltiple, varias `isCorrect`. */
+  options: ExamAnswerOption[];
+  /** Nº de respuestas correctas (en múltiple, > 1). */
+  correctAnswersCount: number;
+  extraInformation: string | null;
+  difficulty: number;
+}
+
+/** Filtros de la práctica directa de examen (RF-26). */
+export interface ExamFilters {
+  courseId: string;
+  topicId?: string | null;
+  difficulty?: number | null;
+  limit?: number;
+}
+
+/** Lo que el usuario envía a corregir: textos de las opciones marcadas. */
+export interface ExamAttempt {
+  questionId: string;
+  selectedAnswers: string[];
+}
+
+/** Veredicto autoritativo por pregunta devuelto por `certdeck-exam-grade`. */
+export interface ExamGradeResult {
+  questionId: string;
+  correct: boolean;
+}
+
+/** Resumen de corrección de un lote de preguntas de examen. */
+export interface ExamGradeSummary {
+  results: ExamGradeResult[];
+  correctCount: number;
+  total: number;
+}

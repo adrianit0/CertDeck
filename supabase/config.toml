@@ -1,0 +1,4 @@
+# CertDeck — configuración de la CLI de Supabase.
+# El proyecto remoto SIEMPRE es este (organización "Prototipos Personales").
+# La CLI lo usa para `supabase link`, `db push` y `functions deploy`.
+project_id = "wtkumfcjqqmgokgrbxxr"

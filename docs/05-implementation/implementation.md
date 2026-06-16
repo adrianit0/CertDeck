@@ -425,6 +425,113 @@ Aplicar el fragmento en el SQL Editor (tras los fragmentos 01/02). El orden alfa
 
 ---
 
+## Iteración v3 — Examen avanzado + progreso enriquecido (2026-06-16)
+
+> Hito **v3** completo (Roadmap §3): práctica directa de examen con validación de
+> **conjunto exacto**, corrección autoritativa, progreso enriquecido (avance por
+> tema, repaso vencido/pendiente, histórico de examen), lecciones `expansion`/
+> `final` operativas y revisión de Q-06 (ADR 0007).
+
+### 1. Resumen
+Se añade la **práctica directa de examen** (RF-24…29) como **quinta pestaña**
+(barra inferior: Cursos/Repasos/**Examen**/Progresos/Perfil). El usuario filtra
+por tema, dificultad y nº de preguntas, responde un simulacro (respuesta única y
+múltiple) y recibe feedback con `extra_information`. La **regla de conjunto
+exacto** (RF-29/RN-11) se valida en cliente para la UX y se **reconfirma de forma
+autoritativa** en la Edge Function `certdeck-exam-grade`, que además **registra el
+intento** (`certdeck_user_question_attempts`) **sin** tocar el repaso espaciado
+(Q-06, ADR 0007). La pestaña de Progresos se enriquece con avance por tema,
+estado de repaso espaciado (vencidas/por venir) e histórico de examen.
+
+### 2. Tareas cubiertas (Roadmap/Tareas v3)
+- **T-v3-001** Examen múltiple con conjunto exacto (UI + reglas).
+- **T-v3-002** Validación autoritativa de examen (`certdeck-exam-grade`).
+- **T-v3-003** Práctica de examen con filtros (tema/dificultad) + `extra_information`.
+- **T-v3-004** Progreso enriquecido (avance por tema, vencidas/pendientes, histórico).
+- **T-v3-005** Lecciones `expansion` y `final` operativas.
+- **T-v3-006** Revisión de Q-06 → **ADR 0007**.
+
+### 3. Lógica pura testeada (RNF-09)
+- `app/lib/exam.ts`: `isExactSetMatch`, `correctTexts`, `gradeExamAnswer`,
+  `examExerciseType`. Comparación normalizada (tildes/mayúsculas/espacios) y regla
+  de conjunto exacto válida para única y múltiple.
+- `app/lib/__tests__/exam.test.ts`: **14 casos** (orden, subconjunto, selección de
+  más, normalización, mapeo de tipo). Suite total: **43 en verde**.
+
+### 4. Frontend
+- **Tipos** (`lib/types.ts`): `ExamQuestion`, `ExamAnswerOption`, `ExamTypeId`,
+  `ExamFilters`, `ExamAttempt`, `ExamGradeResult`, `ExamGradeSummary`.
+- **Queries** (`lib/queries/exam.ts`): `getExamQuestions(filters)` y
+  `gradeExam(attempts)` (vía `invokeEdge`).
+- **Pantallas** (`features/exam/`): `ExamPracticeTab.tsx` (configurador de filtros
+  + histórico) y `ExamPlayer.tsx` (simulacro a pantalla completa: única/múltiple,
+  conjunto exacto, feedback + `extra_information`, resultados).
+- **Navegación**: `Navigation.tsx` pasa a **5 pestañas** (nueva "Examen").
+- **Shell** (`AppShell.tsx`): estado y handlers de examen
+  (`handleStartExam`/`handleCloseExam`), overlay de `ExamPlayer`, y paso de
+  `srs`/`exam` a Progresos. Tras un simulacro: `gradeExam` (autoritativo) +
+  recarga de progreso para refrescar el histórico.
+- **Progreso enriquecido** (`ProgresosTab.tsx`): avance por tema de la etapa,
+  tarjeta de repaso espaciado (vencidas/por venir/en estudio) e histórico de
+  examen. `progressState.ts`: nuevos agregados `srs` y `exam` (+ normalización).
+
+### 5. Backend (Edge Functions, entregadas no desplegadas — §4)
+- **Nueva `certdeck-exam-questions`** (GET): preguntas de examen filtrables por
+  `course_id`/`topic_id`/`difficulty`/`limit`, con respuestas **ya desordenadas**
+  (RF-28) y `isCorrect` por opción para feedback inmediato (RNF-14).
+- **Nueva `certdeck-exam-grade`** (POST): corrección autoritativa de un lote por
+  **conjunto exacto** (RN-11) y registro del intento en
+  `certdeck_user_question_attempts` (Q-06: no toca SRS).
+- **Modificada `certdeck-progress-get`**: añade agregados `srs` (tracked/due/
+  upcoming desde `certdeck_user_spaced_repetition`) y `exam` (attempts/correct
+  desde los intentos de examen).
+- **Modificada `certdeck-playable-lesson`**: `expansion` se compone reciclando
+  tarjetas del tema ya visto (mismo pool que `final`, RF-45b base reservada).
+
+### 6. SQL / Contenido
+- **Sin SQL estructural nuevo**: `certdeck_exam_questions` (script-002) y
+  `certdeck_user_question_attempts` con `exam_*` (script-003) ya existían.
+- **Nuevo contenido**: `supabase/sql_contenido/20260616_04_aws-saa-c03-exam.sql`
+  — 6 preguntas de examen (única y múltiple, dif. 2–4, con `extra_information`)
+  para los temas *Introduction to S3* y *S3 Bucket*. Idempotente vía `NOT EXISTS`
+  sobre `(course_id, question)` (la tabla no tiene clave natural). **No aplicado** (§4).
+
+### 7. Decisión documentada
+- **ADR 0007** — revisión de Q-06: la práctica de examen **no** alimenta el repaso
+  espaciado; registra intentos y nutre el histórico de examen.
+
+### 8. Verificación (local)
+| Check | Comando | Resultado |
+|---|---|---|
+| Tipos | `npm run typecheck` | ✅ |
+| Lint | `npm run lint` | ✅ |
+| Tests | `npm run test` | ✅ 43/43 |
+| Build export | `npm run build` | ✅ export estático OK |
+> Las funciones Deno no entran en el build del frontend. El examen real depende de
+> que el propietario aplique el contenido y despliegue las funciones.
+
+### 9. Instrucciones manuales para el propietario (§4)
+> **Proyecto Supabase fijo:** todas las operaciones (SQL y despliegues) van
+> SIEMPRE contra el proyecto **`wtkumfcjqqmgokgrbxxr`** (organización "Prototipos
+> Personales"). Queda fijado en `supabase/config.toml` (`project_id`); si la CLI
+> no estuviera enlazada: `supabase link --project-ref wtkumfcjqqmgokgrbxxr`.
+
+1. **Aplicar contenido**: `supabase/sql_contenido/20260616_04_aws-saa-c03-exam.sql`
+   (tras los fragmentos 01–03). Idempotente.
+2. **Desplegar/redeployar Edge Functions** (contra `wtkumfcjqqmgokgrbxxr`):
+   ```bash
+   supabase functions deploy certdeck-exam-questions
+   supabase functions deploy certdeck-exam-grade
+   supabase functions deploy certdeck-progress-get        # agregados srs/exam
+   supabase functions deploy certdeck-playable-lesson     # expansion
+   ```
+3. **Verificar**: pestaña *Examen* → filtrar por tema/dificultad → responder una
+   múltiple seleccionando un subconjunto (debe contar como fallo) y el conjunto
+   exacto (acierto); en *Progresos* aparecen el histórico de examen y, tras
+   estudiar tarjetas, las vencidas/por venir.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -440,3 +547,4 @@ Aplicar el fragmento en el SQL Editor (tras los fragmentos 01/02). El orden alfa
 | 1.8.0 | 2026-06-16 | Contenido: tema 2 "S3 Bucket" (slides 19–22), 7 lecciones (4 normales con preguntas + 2 review + 1 final que reciclan). Fragmento `20260616_03_aws-saa-c03.sql` entregado (no aplicado). |
 | 1.9.0 | 2026-06-16 | v2.1: algoritmo SM-2 simplificado puro `app/lib/srs.ts` (Q-03 ajustable) + 12 tests, y `script-006.sql` (`certdeck_user_spaced_repetition` + RLS). El modo posicional se reemplazará por SM-2 en v2.2. |
 | 2.0.0 | 2026-06-16 | v2.2+v2.3: `certdeck-spaced-review-update` (persiste SM-2) + `certdeck-playable-lesson` compone por **vencimiento** (review/final/error_correction), reemplazando el modo posicional; wiring de `cardReviews` en LessonPlayer/AppShell; tarjeta problemática (Q-02) y oferta de corrección < 60% (Q-01). |
+| 3.0.0 | 2026-06-16 | **v3 completo**: práctica directa de examen (5ª pestaña) con conjunto exacto (RF-29), `certdeck-exam-questions`/`certdeck-exam-grade` (autoritativa, registra intento sin tocar SRS — Q-06/ADR 0007), `lib/exam.ts` puro + 14 tests; progreso enriquecido (avance por tema, repaso vencido/pendiente, histórico de examen) con agregados `srs`/`exam` en `certdeck-progress-get`; `expansion` reciclada en `certdeck-playable-lesson`; contenido de examen `20260616_04`. |

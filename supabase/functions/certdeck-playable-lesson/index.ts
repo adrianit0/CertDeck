@@ -15,6 +15,8 @@
 //   - `final`            -> tarjetas de TODO el tema, misma priorización.
 //   - `error_correction` -> tarjetas del tema con problemas (lapses>0 o
 //                           problemática); si no hay, degrada a repaso del tema.
+//   - `expansion`        -> profundización reciclando tarjetas del tema ya visto
+//                           (RF-45b, base reservada): mismo pool que `final`.
 // La priorización por vencimiento implementa la lógica de
 // `certdeck-review-build-lesson` (T-v2-006); se integra aquí para evitar un
 // viaje de red extra del cliente.
@@ -194,7 +196,8 @@ Deno.serve(async (req: Request) => {
 
   // Preguntas: propias (normal) o compuestas por repetición espaciada.
   let questions: Question[];
-  if (lesson.lesson_type === "final") {
+  if (lesson.lesson_type === "final" || lesson.lesson_type === "expansion") {
+    // `expansion` recicla el tema ya visto (RF-45b, base reservada).
     questions = await composeFinal(supabase, userId, lesson);
   } else if (lesson.lesson_type === "review") {
     questions = await composeReview(supabase, userId, lesson);

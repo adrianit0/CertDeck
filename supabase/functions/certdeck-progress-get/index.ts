@@ -12,6 +12,8 @@
 //                              incorrectCount, ankiCount, xp, completedAt } },
 //     failedQuestions: { [questionId]: lessonId },
 //     review: { xp, totalAnswers, correctAnswers, ankiCards },
+//     srs: { tracked, due, upcoming },   // repaso espaciado: tarjetas con estado
+//     exam: { attempts, correct },       // histórico de práctica de examen (v3)
 //     activeDays: string[]  // YYYY-MM-DD (lecciones completadas ∪ repasos)
 //   }
 //
@@ -55,8 +57,9 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) return json({ error: "unauthorized" }, 401);
 
-  // Las tres lecturas en paralelo (cada una filtrada por RLS al usuario).
-  const [progressRes, reviewRes, failedRes] = await Promise.all([
+  // Las lecturas en paralelo (cada una filtrada por RLS al usuario).
+  const nowIso = new Date().toISOString();
+  const [progressRes, reviewRes, failedRes, srsRes, examRes] = await Promise.all([
     supabase
       .from("certdeck_user_lesson_progress")
       .select("lesson_id, status, score_percentage, correct_count, incorrect_count, anki_count, xp, completed_at"),
@@ -66,11 +69,20 @@ Deno.serve(async (req: Request) => {
     supabase
       .from("certdeck_user_failed_questions")
       .select("question_id, lesson_id"),
+    // Repaso espaciado: tarjetas con estado y cuáles están vencidas (due_at<=now).
+    supabase.from("certdeck_user_spaced_repetition").select("due_at"),
+    // Histórico de práctica de examen (intentos registrados, Q-06).
+    supabase
+      .from("certdeck_user_question_attempts")
+      .select("was_correct")
+      .eq("question_source", "exam"),
   ]);
 
   if (progressRes.error) return json({ error: "query_failed", detail: progressRes.error.message }, 500);
   if (reviewRes.error) return json({ error: "query_failed", detail: reviewRes.error.message }, 500);
   if (failedRes.error) return json({ error: "query_failed", detail: failedRes.error.message }, 500);
+  if (srsRes.error) return json({ error: "query_failed", detail: srsRes.error.message }, 500);
+  if (examRes.error) return json({ error: "query_failed", detail: examRes.error.message }, 500);
 
   const activeDays = new Set<string>();
 
@@ -104,11 +116,28 @@ Deno.serve(async (req: Request) => {
     failedQuestions[row.question_id] = row.lesson_id ?? null;
   }
 
+  // Repaso espaciado: total con estado, vencidas (due_at<=now) y por venir.
+  const srs = { tracked: 0, due: 0, upcoming: 0 };
+  for (const row of srsRes.data ?? []) {
+    srs.tracked += 1;
+    if (row.due_at && row.due_at <= nowIso) srs.due += 1;
+    else srs.upcoming += 1;
+  }
+
+  // Histórico de examen: intentos y aciertos.
+  const exam = { attempts: 0, correct: 0 };
+  for (const row of examRes.data ?? []) {
+    exam.attempts += 1;
+    if (row.was_correct) exam.correct += 1;
+  }
+
   return json({
     data: {
       lessons,
       failedQuestions,
       review,
+      srs,
+      exam,
       activeDays: [...activeDays].sort(),
     },
   });

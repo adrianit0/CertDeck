@@ -9,6 +9,9 @@ import type {
   Lesson,
   LessonWithStatus,
   FlashcardQuestion,
+  ExamQuestion,
+  ExamAttempt,
+  ExamFilters,
 } from "@/lib/types";
 import {
   getCourses,
@@ -17,6 +20,7 @@ import {
   getQuestionsByLessons,
   getQuestionsByIds,
 } from "@/lib/queries/content";
+import { getExamQuestions, gradeExam } from "@/lib/queries/exam";
 import {
   getProgress,
   completeLesson,
@@ -43,6 +47,8 @@ import RepasosTab from "./RepasosTab";
 import ProgresosTab from "./ProgresosTab";
 import PerfilTab from "./PerfilTab";
 import LessonPlayer from "./LessonPlayer";
+import ExamPracticeTab from "@/features/exam/ExamPracticeTab";
+import ExamPlayer from "@/features/exam/ExamPlayer";
 
 interface CourseData {
   stages: Stage[];
@@ -91,6 +97,12 @@ export default function AppShell() {
   const [isReviewSession, setIsReviewSession] = useState(false);
   const [reviewType, setReviewType] = useState("");
   const [reviewQuestions, setReviewQuestions] = useState<FlashcardQuestion[]>([]);
+
+  // Práctica de examen (v3): simulacro a pantalla completa, independiente de las
+  // lecciones/repasos (no toca el repaso espaciado; Q-06).
+  const [examActive, setExamActive] = useState(false);
+  const [examLoading, setExamLoading] = useState(false);
+  const [examQuestions, setExamQuestions] = useState<ExamQuestion[]>([]);
 
   // Catálogo de cursos.
   const [courses, setCourses] = useState<Course[] | null>(null);
@@ -241,6 +253,34 @@ export default function AppShell() {
     setCurrentLessonId(REVIEW_LESSON_ID);
   };
 
+  // --- Práctica de examen (v3) --------------------------------------------
+  const handleStartExam = async (filters: ExamFilters) => {
+    if (offline || examLoading) return;
+    setExamLoading(true);
+    try {
+      const questions = await getExamQuestions(filters);
+      setExamQuestions(questions);
+      setExamActive(true);
+    } catch {
+      setExamQuestions([]);
+      setExamActive(true); // el player muestra el estado "sin preguntas"
+    } finally {
+      setExamLoading(false);
+    }
+  };
+
+  const handleCloseExam = (completed: boolean, attempts: ExamAttempt[]) => {
+    if (completed && attempts.length > 0) {
+      // Corrección autoritativa + registro del intento; luego refresca el
+      // histórico de examen leyendo el progreso real (no es optimista).
+      void gradeExam(attempts)
+        .then(() => loadProgress())
+        .catch(() => setConnectionLost(true));
+    }
+    setExamActive(false);
+    setExamQuestions([]);
+  };
+
   const handleResetProgress = () => {
     setProgress(emptyState()); // Optimista: vacía la UI de inmediato.
     setActiveTab("cursos");
@@ -341,8 +381,31 @@ export default function AppShell() {
           />
         )}
 
+        {activeTab === "examen" && (
+          <ExamPracticeTab
+            activeCourse={activeCourse}
+            topics={topics}
+            onStartExam={handleStartExam}
+            examLoading={examLoading}
+            offline={offline}
+            examAttempts={progress.exam.attempts}
+            examAccuracy={
+              progress.exam.attempts > 0
+                ? Math.round((progress.exam.correct / progress.exam.attempts) * 100)
+                : 0
+            }
+          />
+        )}
+
         {activeTab === "progresos" && (
-          <ProgresosTab stats={stats} lessons={lessons} topics={topics} activeStage={activeStage} />
+          <ProgresosTab
+            stats={stats}
+            lessons={lessons}
+            topics={topics}
+            activeStage={activeStage}
+            srs={progress.srs}
+            exam={progress.exam}
+          />
         )}
 
         {activeTab === "perfil" && (
@@ -373,8 +436,8 @@ export default function AppShell() {
           </div>
         )}
 
-        {/* Cabecera (oculta dentro de la lección) */}
-        {currentLessonId === null && (
+        {/* Cabecera (oculta dentro de la lección o el examen) */}
+        {currentLessonId === null && !examActive && (
           <header className="px-5 pt-5 pb-1 flex justify-between items-center bg-white border-b border-slate-50 shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-brand-primary flex items-center justify-center text-white shadow-md shadow-blue-500/10">
@@ -404,13 +467,21 @@ export default function AppShell() {
               activeCourseTitle={activeCourse.title}
               onClose={handleClosePlayer}
             />
+          ) : examActive && activeCourse ? (
+            <ExamPlayer
+              questions={examQuestions}
+              courseTitle={activeCourse.title}
+              onClose={handleCloseExam}
+            />
           ) : (
             renderContent()
           )}
         </div>
 
-        {/* Barra inferior (oculta dentro de la lección) */}
-        {currentLessonId === null && <Navigation activeTab={activeTab} onTabChange={setActiveTab} />}
+        {/* Barra inferior (oculta dentro de la lección o el examen) */}
+        {currentLessonId === null && !examActive && (
+          <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+        )}
       </div>
     </div>
   );

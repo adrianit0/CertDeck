@@ -1,27 +1,46 @@
 "use client";
 
-import { Zap, TrendingUp, Star } from "lucide-react";
+import { Zap, TrendingUp, Star, Clock, AlarmClock, GraduationCap, Layers } from "lucide-react";
 import type { UserStats, LessonWithStatus, Topic, Stage } from "@/lib/types";
+import type { SrsSummary, ExamSummary } from "@/lib/progress/progressState";
 
 interface ProgresosTabProps {
   stats: UserStats;
   lessons: LessonWithStatus[];
   topics: Topic[];
   activeStage: Stage;
+  srs: SrsSummary;
+  exam: ExamSummary;
 }
 
-export default function ProgresosTab({ stats, lessons, topics, activeStage }: ProgresosTabProps) {
+export default function ProgresosTab({ stats, lessons, topics, activeStage, srs, exam }: ProgresosTabProps) {
   const courseLessons = lessons;
   const completedCourseLessons = lessons.filter((l) => l.status === "completed").length;
   const coursePercent = Math.round((completedCourseLessons / Math.max(courseLessons.length, 1)) * 100);
 
-  const stageTopics = topics.filter((t) => t.stage_id === activeStage.id);
+  const stageTopics = topics
+    .filter((t) => t.stage_id === activeStage.id)
+    .sort((a, b) => a.position - b.position);
   const stageLessons = lessons.filter((l) => stageTopics.some((t) => t.id === l.topic_id));
   const completedStageLessons = stageLessons.filter((l) => l.status === "completed").length;
   const stagePercent = Math.round((completedStageLessons / Math.max(stageLessons.length, 1)) * 100);
 
+  // Avance por tema (RF-34 ampliado): % de lecciones completadas en cada tema.
+  const topicProgress = stageTopics.map((t) => {
+    const tLessons = lessons.filter((l) => l.topic_id === t.id);
+    const done = tLessons.filter((l) => l.status === "completed").length;
+    return {
+      id: t.id,
+      title: t.title,
+      done,
+      total: tLessons.length,
+      percent: Math.round((done / Math.max(tLessons.length, 1)) * 100),
+    };
+  });
+
   const successRate =
     stats.totalAnswers > 0 ? Math.round((stats.correctAnswers / stats.totalAnswers) * 100) : 0;
+  const examAccuracy = exam.attempts > 0 ? Math.round((exam.correct / exam.attempts) * 100) : 0;
 
   const xpForNextLevel = 1000;
   const currentXp = stats.xp % xpForNextLevel;
@@ -154,6 +173,82 @@ export default function ProgresosTab({ stats, lessons, topics, activeStage }: Pr
               </span>
             </div>
             {renderCircularProgress(stagePercent, 72, 7, "text-brand-accent")}
+          </div>
+        </div>
+      </div>
+
+      {/* Repaso espaciado: tarjetas vencidas / por venir (RF-34) */}
+      <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] space-y-4">
+        <h3 className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Repaso Espaciado</h3>
+        <div className="grid grid-cols-3 gap-2.5">
+          <div className="bg-rose-50/60 border border-rose-100 rounded-2xl p-3 text-center">
+            <AlarmClock className="w-4 h-4 text-rose-500 mx-auto mb-1" />
+            <span className="text-lg font-black text-rose-600 block leading-none">{srs.due}</span>
+            <span className="text-[9px] text-slate-500 font-bold uppercase block mt-1">Vencidas</span>
+          </div>
+          <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-3 text-center">
+            <Clock className="w-4 h-4 text-blue-500 mx-auto mb-1" />
+            <span className="text-lg font-black text-blue-600 block leading-none">{srs.upcoming}</span>
+            <span className="text-[9px] text-slate-500 font-bold uppercase block mt-1">Por venir</span>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-center">
+            <Layers className="w-4 h-4 text-slate-500 mx-auto mb-1" />
+            <span className="text-lg font-black text-slate-700 block leading-none">{srs.tracked}</span>
+            <span className="text-[9px] text-slate-500 font-bold uppercase block mt-1">En estudio</span>
+          </div>
+        </div>
+        {srs.due > 0 && (
+          <p className="text-[11px] text-rose-600 font-semibold bg-rose-50 py-1.5 rounded-full text-center border border-rose-100/50">
+            Tienes {srs.due} {srs.due === 1 ? "tarjeta vencida" : "tarjetas vencidas"} para repasar
+          </p>
+        )}
+      </div>
+
+      {/* Avance por tema de la etapa activa (RF-34 ampliado) */}
+      <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] space-y-4">
+        <h3 className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
+          Avance por Tema · {activeStage.title}
+        </h3>
+        {topicProgress.length === 0 ? (
+          <p className="text-xs text-slate-400">No hay temas en esta etapa.</p>
+        ) : (
+          <div className="space-y-3.5">
+            {topicProgress.map((t) => (
+              <div key={t.id} className="space-y-1.5">
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-[12px] font-bold text-slate-700 line-clamp-1">{t.title}</span>
+                  <span className="text-[10px] font-bold text-slate-400 shrink-0">
+                    {t.done}/{t.total}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-sky-400 rounded-full transition-all duration-500"
+                    style={{ width: `${t.percent}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Histórico de práctica de examen (RF-34 ampliado) */}
+      <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] space-y-4">
+        <h3 className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Histórico de Examen</h3>
+        <div className="flex justify-around divide-x divide-slate-100 py-2">
+          <div className="text-center px-4 flex-1">
+            <GraduationCap className="w-4 h-4 text-indigo-500 mx-auto mb-1" />
+            <span className="font-extrabold text-slate-700 text-lg block">{exam.attempts}</span>
+            <span className="text-[10px] text-slate-400 font-semibold block uppercase">Intentos</span>
+          </div>
+          <div className="text-center px-4 flex-1">
+            <span className="font-extrabold text-emerald-500 text-lg block mt-5">{exam.correct}</span>
+            <span className="text-[10px] text-slate-400 font-semibold block uppercase">Aciertos</span>
+          </div>
+          <div className="text-center px-4 flex-1">
+            <span className="font-extrabold text-slate-700 text-lg block mt-5">{examAccuracy}%</span>
+            <span className="text-[10px] text-slate-400 font-semibold block uppercase">Precisión</span>
           </div>
         </div>
       </div>

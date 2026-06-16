@@ -222,6 +222,19 @@
 | T-v3-005 | frontend | Lecciones `expansion` y `final` | `app/features/lesson/types/{expansion,final}/*` | RF-44/45 |
 | T-v3-006 | docs | Revisión Q-06 (¿examen alimenta repaso?) + ADR si cambia | `docs/00-decisions/*`, `docs/05-implementation/implementation.md` | Q-06 |
 
+> **✅ v3 entregada (2026-06-16).** Implementada sobre la arquitectura real
+> (shell por pestañas, datos vía Edge Functions), no las rutas hipotéticas de la
+> tabla:
+> - **T-v3-001/003**: `app/features/exam/ExamPlayer.tsx` + `ExamPracticeTab.tsx`
+>   (5ª pestaña "Examen"); lógica pura `app/lib/exam.ts` (+14 tests).
+> - **T-v3-002**: `certdeck-exam-grade` (corrección autoritativa + registro de
+>   intento); lectura filtrable `certdeck-exam-questions`.
+> - **T-v3-004**: `ProgresosTab` enriquecido (avance por tema, repaso vencido/
+>   pendiente, histórico de examen); agregados `srs`/`exam` en `certdeck-progress-get`.
+> - **T-v3-005**: `final` ya compuesta; `expansion` reciclada en `certdeck-playable-lesson`.
+> - **T-v3-006**: **ADR 0007** (Q-06 confirmada: el examen no alimenta el SRS).
+> - Contenido de examen: `supabase/sql_contenido/20260616_04_aws-saa-c03-exam.sql`.
+
 ---
 
 ## 6. v4+ — Pulido y futuro
@@ -247,10 +260,13 @@
 
 **Edge Functions nuevas previstas:**
 - `certdeck-progress-complete-lesson` (v1; ampliada en ADR 0006)
-- `certdeck-progress-get` · `certdeck-progress-record-review` · `certdeck-progress-reset` (v1, ADR 0006)
+- `certdeck-progress-get` · `certdeck-progress-record-review` · `certdeck-progress-reset` (v1, ADR 0006; `progress-get` amplía agregados `srs`/`exam` en v3)
 - `certdeck-spaced-review-update` (v2)
-- `certdeck-review-build-lesson` (v2)
-- `certdeck-exam-grade` (v3, opcional)
+- `certdeck-review-build-lesson` (v2; integrada en `certdeck-playable-lesson`)
+- `certdeck-exam-questions` · `certdeck-exam-grade` (v3, entregadas)
+
+**Contenido SQL (sql_contenido/):**
+- `20260616_04_aws-saa-c03-exam.sql` — preguntas de examen (v3)
 
 > Recordatorio: cada uno se entrega como **archivo + instrucciones manuales** en `docs/05-implementation/implementation.md`. El propietario los revisa, aplica/despliega y configura el entorno.
 
@@ -275,3 +291,4 @@ Aprobada cuando el propietario confirma:
 | 1.0.0 | 2026-06-15 | Versión inicial de Tareas (Fase 4). Pendiente de aprobación. |
 | 1.1.0 | 2026-06-15 | Añadida §3bis (revisión Requisitos 1.2.0): barra inferior + curso/etapa activos (ADR 0004), lección a pantalla completa (botones abajo, fuente mayor, Markdown negrita), ronda de corrección, base de examen, revisión de contenido; v2 alineada con composición dinámica (ADR 0005). |
 | 1.2.0 | 2026-06-15 | Añadida §3ter (ADR 0006): migración de la persistencia del progreso a la BD — `script-005.sql`, Edge Functions de progreso (get/record-review/reset + complete-lesson ampliada), estado optimista en memoria y manejo offline (T-v1-035…046). |
+| 1.3.0 | 2026-06-16 | **v3 entregada**: práctica de examen (T-v3-001/003), corrección autoritativa `certdeck-exam-grade` (T-v3-002), progreso enriquecido (T-v3-004), `expansion`/`final` (T-v3-005) y ADR 0007 para Q-06 (T-v3-006). Artefactos: `certdeck-exam-questions`/`certdeck-exam-grade`, contenido `20260616_04`. |

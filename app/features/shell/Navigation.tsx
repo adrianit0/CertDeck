@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, RotateCw, BarChart3, User } from "lucide-react";
+import { BookOpen, RotateCw, GraduationCap, BarChart3, User } from "lucide-react";
 
 interface NavigationProps {
   activeTab: string;
@@ -11,6 +11,7 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
   const tabs = [
     { id: "cursos", name: "Cursos", icon: BookOpen },
     { id: "repasos", name: "Repasos", icon: RotateCw },
+    { id: "examen", name: "Examen", icon: GraduationCap },
     { id: "progresos", name: "Progresos", icon: BarChart3 },
     { id: "perfil", name: "Perfil", icon: User },
   ];
