@@ -10,9 +10,10 @@ Inyectadas por la plataforma: `SUPABASE_URL`, `SUPABASE_ANON_KEY`. Usa el JWT de
 usuario (`Authorization`) para que RLS y `auth.uid()` apliquen.
 
 ## Dependencias de base de datos
-- `script-003.sql` (progreso de lección) y **`script-005.sql`**
+- `script-003.sql` (progreso de lección), **`script-005.sql`**
   (`certdeck_user_review_sessions`, `certdeck_user_failed_questions`, columnas
-  `xp`/`anki_count`).
+  `xp`/`anki_count`), `script-006.sql` (`certdeck_user_spaced_repetition`) y
+  **`script-009.sql`** (`certdeck_user_exam_sessions`).
 
 ## Entrada
 `GET` sin cuerpo. Filtra por el usuario del JWT.
@@ -33,7 +34,9 @@ usuario (`Authorization`) para que RLS y `auth.uid()` apliquen.
       }
     },
     "failedQuestions": { "uuid-pregunta": "uuid-leccion" },
-    "review": { "xp": 0, "totalAnswers": 0, "correctAnswers": 0, "ankiCards": 0 },
+    "review": { "xp": 0, "totalAnswers": 0, "correctAnswers": 0, "ankiCards": 0, "sessions": 0 },
+    "srs": { "tracked": 0, "due": 0, "upcoming": 0 },
+    "exam": { "attempts": 0, "correct": 0, "sessions": 0, "xp": 0 },
     "activeDays": ["2026-06-14", "2026-06-15"]
   }
 }

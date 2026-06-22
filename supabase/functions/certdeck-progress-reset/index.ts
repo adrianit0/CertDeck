@@ -3,7 +3,7 @@
 // Runtime: Deno (Supabase Edge Functions). TypeScript.
 //
 // Borra TODO el progreso del usuario (ADR 0006): progreso de lecciones,
-// sesiones de repaso y errores pendientes. Sustituye al `resetProgress()` que
+// sesiones de repaso, errores pendientes y sesiones de examen. Sustituye al `resetProgress()` que
 // antes solo limpiaba localStorage. RLS garantiza que cada usuario solo borra
 // sus propias filas.
 //
@@ -42,11 +42,12 @@ Deno.serve(async (req: Request) => {
   if (userError || !userData.user) return json({ error: "unauthorized" }, 401);
   const userId = userData.user.id;
 
-  // Borrado en las tres tablas (RLS limita a las filas propias).
+  // Borrado en las tablas de progreso (RLS limita a las filas propias).
   const results = await Promise.all([
     supabase.from("certdeck_user_lesson_progress").delete().eq("user_id", userId),
     supabase.from("certdeck_user_review_sessions").delete().eq("user_id", userId),
     supabase.from("certdeck_user_failed_questions").delete().eq("user_id", userId),
+    supabase.from("certdeck_user_exam_sessions").delete().eq("user_id", userId),
   ]);
 
   const failed = results.find((r) => r.error);

@@ -1,7 +1,8 @@
 # Edge Function: `certdeck-progress-reset`
 
 Borra **todo el progreso** del usuario (ADR 0006): progreso de lecciones,
-sesiones de repaso y errores pendientes. Sustituye al `resetProgress()` local.
+sesiones de repaso, errores pendientes y sesiones de examen. Sustituye al
+`resetProgress()` local.
 
 > **Función NUEVA.** CORS propio; no comparte código con otras funciones (Constitución §4). El agente no la despliega.
 
@@ -10,7 +11,8 @@ Inyectadas por la plataforma: `SUPABASE_URL`, `SUPABASE_ANON_KEY`. Usa el JWT de
 usuario (`Authorization`); RLS garantiza que solo borra sus propias filas.
 
 ## Dependencias de base de datos
-- `script-003.sql` y **`script-005.sql`** aplicados.
+- `script-003.sql`, **`script-005.sql`** y **`script-009.sql`**
+  (`certdeck_user_exam_sessions`) aplicados.
 
 ## Entrada
 `POST` sin cuerpo.

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { LessonScreen, FlashcardQuestion, SessionResult } from "@/lib/types";
 import { getPlayableLesson } from "@/lib/queries/content";
+import { sessionXp } from "@/lib/xp";
 import ReportControl from "@/components/ReportControl";
 
 interface LessonPlayerProps {
@@ -24,6 +25,8 @@ interface LessonPlayerProps {
   reviewType?: string;
   /** Preguntas ya cargadas de BD para las sesiones de repaso. */
   reviewQuestions?: FlashcardQuestion[];
+  /** La lección ya estaba completada → la XP se reduce un 80% (repetición). */
+  isRepeat?: boolean;
   onClose: (completed: boolean, result: SessionResult | null) => void;
   activeCourseTitle: string;
   activeCourseId?: string | null;
@@ -43,6 +46,7 @@ export default function LessonPlayer({
   lessonId,
   isReviewSession = false,
   reviewQuestions = [],
+  isRepeat = false,
   onClose,
   activeCourseTitle,
   activeCourseId = null,
@@ -260,7 +264,9 @@ export default function LessonPlayer({
       [activeQuestion.id]: {
         primaryCorrect: isPrimary ? isCorrect : prev[activeQuestion.id]?.primaryCorrect || false,
         finalCorrect: isCorrect,
-        ankiDifficulty: val,
+        // La autoevaluación que cuenta para SM-2 es la de la pasada principal;
+        // la corrección no debe sobrescribirla (la tarjeta sigue fallada).
+        ankiDifficulty: isPrimary ? val : prev[activeQuestion.id]?.ankiDifficulty,
       },
     }));
 
@@ -310,32 +316,44 @@ export default function LessonPlayer({
   };
 
   const primaryCorrectCount = Object.values(answersLog).filter((l) => l.primaryCorrect).length;
-  const finalCorrectCount = Object.values(answersLog).filter((l) => l.finalCorrect).length;
-  const totalCorrectToReport = Math.max(primaryCorrectCount, finalCorrectCount);
-  const correctRate = Math.round((totalCorrectToReport / Math.max(totalExercises, 1)) * 100);
-  const xpGained = totalCorrectToReport * 50 + (isReviewSession ? 100 : 250);
+  // Cada pregunta fallada en la pasada principal se re-pregunta en la ronda de
+  // corrección y cuenta como una PREGUNTA NUEVA dentro de la lección. La original
+  // queda siempre como fallada; acertar la corrección suma su propio acierto pero
+  // no "rescata" la pregunta original (por eso un fallo previo nunca da 100%).
+  const correctionTotal = failedList.length;
+  const correctionCorrectCount = failedList.filter((q) => answersLog[q.id]?.finalCorrect).length;
+  const totalQuestionsAnswered = totalExercises + correctionTotal;
+  const totalCorrectToReport = primaryCorrectCount + correctionCorrectCount;
+  const correctRate = Math.round((totalCorrectToReport / Math.max(totalQuestionsAnswered, 1)) * 100);
+  // XP por % de acierto (máx 100), independiente del número de preguntas. Repetir
+  // una lección ya completada da el 20%. Valor OPTIMISTA: el servidor lo recalcula.
+  const xpGained = sessionXp(correctRate, isRepeat);
 
   // Empaqueta el resultado real de la sesión para persistir progreso y métricas.
   const buildSessionResult = (): SessionResult => ({
     correctCount: totalCorrectToReport,
-    incorrectCount: Math.max(totalExercises - totalCorrectToReport, 0),
+    incorrectCount: Math.max(totalQuestionsAnswered - totalCorrectToReport, 0),
     scorePercentage: correctRate,
     ankiCount: questions.filter((q) => q.exercise_type === "anki_card").length,
     xpGained,
+    // Las preguntas falladas en la pasada principal quedan SIEMPRE como falladas
+    // (van a los errores de repaso), aunque luego se acierten en la corrección.
     failedQuestions: questions
-      .filter((q) => !answersLog[q.id]?.finalCorrect)
+      .filter((q) => !answersLog[q.id]?.primaryCorrect)
       .map((q) => ({ id: q.id, lessonId: q.lesson_id })),
-    passedQuestionIds: questions.filter((q) => answersLog[q.id]?.finalCorrect).map((q) => q.id),
-    // Grade por tarjeta para SM-2: en ANKI se usa la autoevaluación; en el resto
-    // de tipos se deriva del acierto final (correcto/fallo).
+    passedQuestionIds: questions.filter((q) => answersLog[q.id]?.primaryCorrect).map((q) => q.id),
+    // Grade por tarjeta para SM-2: se toma el resultado de la PASADA PRINCIPAL
+    // (la corrección no rescata la tarjeta). En ANKI se usa la autoevaluación.
     cardReviews: questions
       .filter((q) => answersLog[q.id])
       .map((q) => {
         const log = answersLog[q.id]!;
         const grade =
           q.exercise_type === "anki_card"
-            ? (log.ankiDifficulty ?? (log.finalCorrect ? "correct" : "fail"))
-            : log.finalCorrect
+            ? log.primaryCorrect
+              ? (log.ankiDifficulty ?? "correct")
+              : "fail"
+            : log.primaryCorrect
               ? "correct"
               : "fail";
         return { questionId: q.id, grade };
@@ -704,7 +722,7 @@ export default function LessonPlayer({
                   repasar cada una ahora mismo para fijar el conocimiento.
                 </p>
                 <p className="text-xs text-amber-600 font-semibold bg-amber-50 py-1.5 px-3 rounded-full inline-block border border-amber-100">
-                  Acierto ahora = Recuperada • Segundo fallo = Registrada
+                  Ya cuentan como falladas • Este reintento puntúa aparte
                 </p>
               </div>
             </div>
@@ -736,7 +754,7 @@ export default function LessonPlayer({
               <div className="grid grid-cols-3 gap-2.5 py-2">
                 <div className="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
                   <span className="text-[9px] block text-slate-400 font-bold uppercase">Aciertos</span>
-                  <span className="text-lg font-black text-emerald-500 block mt-0.5">{totalCorrectToReport} / {totalExercises}</span>
+                  <span className="text-lg font-black text-emerald-500 block mt-0.5">{totalCorrectToReport} / {totalQuestionsAnswered}</span>
                 </div>
                 <div className="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
                   <span className="text-[9px] block text-slate-400 font-bold uppercase">Precisión</span>

@@ -6,10 +6,18 @@ y registro del intento. Reaplica en servidor la regla de **conjunto exacto**
 `certdeck_user_question_attempts`. **No** altera la repetición espaciada (Q-06):
 el examen no alimenta el repaso en el MVP.
 
+Además registra una **sesión de examen** en `certdeck_user_exam_sessions` con XP
+autoritativa (`xp = min(100, 50 + floor(score/2))`); cada sesión cuenta como "una
+lección más" y aporta XP al total.
+
 > **Función NUEVA y autocontenida** (Constitución §4). El agente no la despliega.
 
 ## Variables de entorno (inyectadas por la plataforma)
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY` · usa el JWT del usuario (RLS).
+
+## Dependencias de base de datos
+- `certdeck_exam_questions`, `certdeck_user_question_attempts` y **`script-009.sql`**
+  (`certdeck_user_exam_sessions`).
 
 ## Petición
 - **POST** con `Authorization: Bearer <jwt>` y `apikey`.
@@ -19,7 +27,7 @@ el examen no alimenta el repaso en el MVP.
 
 ## Respuesta
 ```json
-{ "data": { "results": [ { "questionId": "<uuid>", "correct": true } ], "correctCount": 1, "total": 1 } }
+{ "data": { "results": [ { "questionId": "<uuid>", "correct": true } ], "correctCount": 1, "total": 1, "score": 100, "xp": 100 } }
 ```
 
 ## Errores

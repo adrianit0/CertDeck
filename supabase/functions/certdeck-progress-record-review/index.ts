@@ -18,9 +18,16 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// XP autoritativo de repaso: correctas * 50 + bonus de repaso.
-const XP_PER_CORRECT = 50;
-const XP_REVIEW_BONUS = 100;
+// XP autoritativo de repaso (réplica de app/lib/xp.ts, RT-03): base 50 + 1 por
+// cada 2% de acierto (máx 100), independiente del nº de preguntas. El front no la
+// puede inflar. Un repaso cuenta como "una lección más".
+const XP_BASE = 50;
+const XP_MAX = 100;
+
+function sessionXp(scorePercentage: number): number {
+  const s = Math.max(0, Math.min(100, Math.round(scorePercentage)));
+  return Math.min(XP_MAX, XP_BASE + Math.floor(s / 2));
+}
 
 const REVIEW_TYPES = ["topic-review", "general-review", "topic-errors", "general-errors"];
 
@@ -82,7 +89,9 @@ Deno.serve(async (req: Request) => {
   const userId = userData.user.id;
 
   // XP recalculado en servidor (no se confía en el cliente).
-  const xp = correct * XP_PER_CORRECT + XP_REVIEW_BONUS;
+  const total = correct + incorrect;
+  const score = total === 0 ? 100 : Math.round((correct / total) * 100);
+  const xp = sessionXp(score);
 
   const { data, error } = await supabase
     .from("certdeck_user_review_sessions")

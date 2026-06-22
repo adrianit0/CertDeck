@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ExamAttempt, ExamQuestion } from "@/lib/types";
 import { gradeExamAnswer } from "@/lib/exam";
+import { sessionXp } from "@/lib/xp";
 import ReportControl from "@/components/ReportControl";
 
 interface ExamPlayerProps {
@@ -265,7 +266,7 @@ export default function ExamPlayer({ questions, courseTitle, onClose }: ExamPlay
                 </span>
                 <h2 className="font-black text-slate-800 text-[22px] tracking-tight">Resultado del Examen</h2>
               </div>
-              <div className="grid grid-cols-2 gap-2.5 py-2">
+              <div className="grid grid-cols-3 gap-2.5 py-2">
                 <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                   <span className="text-[9px] block text-slate-400 font-bold uppercase">Aciertos</span>
                   <span className="text-lg font-black text-emerald-500 block mt-0.5">{correctSoFar} / {total}</span>
@@ -273,6 +274,10 @@ export default function ExamPlayer({ questions, courseTitle, onClose }: ExamPlay
                 <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                   <span className="text-[9px] block text-slate-400 font-bold uppercase">Nota</span>
                   <span className="text-lg font-black text-slate-700 block mt-0.5">{finalScore}%</span>
+                </div>
+                <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                  <span className="text-[9px] block text-slate-400 font-bold uppercase">XP</span>
+                  <span className="text-lg font-black text-amber-500 block mt-0.5">+{sessionXp(finalScore)}</span>
                 </div>
               </div>
               <div className="p-4 bg-slate-100/50 border border-slate-100 rounded-2xl text-[12px] text-slate-600 leading-relaxed max-w-[320px] mx-auto">

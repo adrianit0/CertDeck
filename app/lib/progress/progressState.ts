@@ -30,6 +30,8 @@ export interface ReviewActivity {
   totalAnswers: number;
   correctAnswers: number;
   ankiCards: number;
+  /** Nº de sesiones de repaso (cada una cuenta como "una lección más"). */
+  sessions: number;
 }
 
 /** Estado agregado de repetición espaciada (tarjetas con seguimiento SM-2). */
@@ -44,8 +46,13 @@ export interface SrsSummary {
 
 /** Histórico de práctica de examen (intentos registrados, v3 · Q-06). */
 export interface ExamSummary {
+  /** Intentos a nivel de PREGUNTA (para el histórico de aciertos). */
   attempts: number;
   correct: number;
+  /** Nº de SESIONES de examen (cada una cuenta como "una lección más"). */
+  sessions: number;
+  /** XP acumulada por las sesiones de examen. */
+  xp: number;
 }
 
 export interface ProgressState {
@@ -63,9 +70,9 @@ export function emptyState(): ProgressState {
   return {
     lessons: {},
     failedQuestions: {},
-    review: { xp: 0, totalAnswers: 0, correctAnswers: 0, ankiCards: 0 },
+    review: { xp: 0, totalAnswers: 0, correctAnswers: 0, ankiCards: 0, sessions: 0 },
     srs: { tracked: 0, due: 0, upcoming: 0 },
-    exam: { attempts: 0, correct: 0 },
+    exam: { attempts: 0, correct: 0, sessions: 0, xp: 0 },
     activeDays: [],
   };
 }
@@ -108,6 +115,7 @@ export function normalize(parsed: unknown): ProgressState {
       totalAnswers: typeof r.totalAnswers === "number" ? r.totalAnswers : 0,
       correctAnswers: typeof r.correctAnswers === "number" ? r.correctAnswers : 0,
       ankiCards: typeof r.ankiCards === "number" ? r.ankiCards : 0,
+      sessions: typeof r.sessions === "number" ? r.sessions : 0,
     };
   }
   if (obj.srs && typeof obj.srs === "object") {
@@ -123,6 +131,8 @@ export function normalize(parsed: unknown): ProgressState {
     base.exam = {
       attempts: typeof e.attempts === "number" ? e.attempts : 0,
       correct: typeof e.correct === "number" ? e.correct : 0,
+      sessions: typeof e.sessions === "number" ? e.sessions : 0,
+      xp: typeof e.xp === "number" ? e.xp : 0,
     };
   }
   if (Array.isArray(obj.activeDays)) {
@@ -160,6 +170,12 @@ export function applyLessonCompleted(
   lessonId: string,
   result: SessionResult,
 ): ProgressState {
+  // Si la lección ya estaba completada, es una REPETICIÓN: la XP reducida
+  // (result.xpGained ya viene al 20%) se SUMA a la obtenida, no la reemplaza
+  // (evita que repetir baje la XP total). Ver ADR 0010.
+  const prev = state.lessons[lessonId];
+  const isRepeat = prev?.status === "completed";
+  const xp = isRepeat ? prev.xp + result.xpGained : result.xpGained;
   return {
     ...state,
     lessons: {
@@ -170,7 +186,7 @@ export function applyLessonCompleted(
         correctCount: result.correctCount,
         incorrectCount: result.incorrectCount,
         ankiCount: result.ankiCount,
-        xp: result.xpGained,
+        xp,
         completedAt: new Date().toISOString(),
       },
     },
@@ -188,6 +204,7 @@ export function applyReviewSession(state: ProgressState, result: SessionResult):
       totalAnswers: state.review.totalAnswers + result.correctCount + result.incorrectCount,
       correctAnswers: state.review.correctAnswers + result.correctCount,
       ankiCards: state.review.ankiCards + result.ankiCount,
+      sessions: state.review.sessions + 1,
     },
     failedQuestions: applyQuestionOutcomes(state.failedQuestions, result),
     activeDays: withTodayActive(state.activeDays),
@@ -242,9 +259,11 @@ export function computeUserStats(state: ProgressState): UserStats {
   const lessonAnki = completed.reduce((sum, l) => sum + l.ankiCount, 0);
 
   return {
-    xp: lessonXp + state.review.xp,
+    // XP total = lecciones + repasos + exámenes (todos blindados en servidor).
+    xp: lessonXp + state.review.xp + state.exam.xp,
     streak: computeStreak(state.activeDays),
-    lessonsCompleted: completed.length,
+    // Repasos y exámenes cuentan como "una lección más" (regla 2026-06-22).
+    lessonsCompleted: completed.length + state.review.sessions + state.exam.sessions,
     totalAnswers: lessonCorrect + lessonIncorrect + state.review.totalAnswers,
     correctAnswers: lessonCorrect + state.review.correctAnswers,
     ankiCardsStudied: lessonAnki + state.review.ankiCards,

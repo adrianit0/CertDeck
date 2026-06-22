@@ -3,6 +3,7 @@
 import { Zap, TrendingUp, Star, Clock, AlarmClock, GraduationCap, Layers } from "lucide-react";
 import type { UserStats, LessonWithStatus, Topic, Stage } from "@/lib/types";
 import type { SrsSummary, ExamSummary } from "@/lib/progress/progressState";
+import { levelProgress } from "@/lib/level";
 
 interface ProgresosTabProps {
   stats: UserStats;
@@ -42,10 +43,10 @@ export default function ProgresosTab({ stats, lessons, topics, activeStage, srs,
     stats.totalAnswers > 0 ? Math.round((stats.correctAnswers / stats.totalAnswers) * 100) : 0;
   const examAccuracy = exam.attempts > 0 ? Math.round((exam.correct / exam.attempts) * 100) : 0;
 
-  const xpForNextLevel = 1000;
-  const currentXp = stats.xp % xpForNextLevel;
-  const level = Math.floor(stats.xp / xpForNextLevel) + 1;
-  const xpPercent = Math.round((currentXp / xpForNextLevel) * 100);
+  // Curva de niveles real (máx 99 niveles ≈ 1.000.000 XP). Ver lib/level.ts.
+  const lvl = levelProgress(stats.xp);
+  const level = lvl.level;
+  const xpPercent = lvl.percent;
 
   const renderCircularProgress = (
     percent: number,
@@ -107,7 +108,9 @@ export default function ProgresosTab({ stats, lessons, topics, activeStage, srs,
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-slate-400">
             <span>Progreso de nivel</span>
-            <span className="font-bold text-slate-600">{currentXp} / {xpForNextLevel} XP</span>
+            <span className="font-bold text-slate-600">
+              {lvl.isMax ? "Nivel máximo" : `${lvl.xpIntoLevel} / ${lvl.xpSpan} XP`}
+            </span>
           </div>
           <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-500" style={{ width: `${xpPercent}%` }} />

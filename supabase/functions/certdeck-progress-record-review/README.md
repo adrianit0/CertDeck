@@ -30,7 +30,9 @@ usuario (`Authorization`).
 ```json
 { "data": { "ok": true, "review": { "id": "…", "xp": 500, "total_answers": 10, "correct_answers": 8, "anki_cards": 4 } } }
 ```
-El `xp` se **recalcula en el servidor** (xp = aciertos·50 + 100).
+El `xp` se **recalcula en el servidor**, no depende del nº de preguntas:
+`xp = min(100, 50 + floor(score/2))` (base 50 + 1 por cada 2% de acierto, máx 100).
+Un repaso cuenta como "una lección más".
 
 ## Errores posibles
 | HTTP | `error` | Causa |

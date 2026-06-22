@@ -546,6 +546,7 @@ export default function AppShell() {
               isReviewSession={isReviewSession}
               reviewType={reviewType}
               reviewQuestions={reviewQuestions}
+              isRepeat={!isReviewSession && progress.lessons[currentLessonId]?.status === "completed"}
               activeCourseTitle={activeCourse.title}
               activeCourseId={activeCourse.id}
               onClose={handleClosePlayer}

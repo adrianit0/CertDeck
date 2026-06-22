@@ -11,9 +11,9 @@
 //     lessons: { [lessonId]: { status, scorePercentage, correctCount,
 //                              incorrectCount, ankiCount, xp, completedAt } },
 //     failedQuestions: { [questionId]: lessonId },
-//     review: { xp, totalAnswers, correctAnswers, ankiCards },
+//     review: { xp, totalAnswers, correctAnswers, ankiCards, sessions },
 //     srs: { tracked, due, upcoming },   // repaso espaciado: tarjetas con estado
-//     exam: { attempts, correct },       // histórico de práctica de examen (v3)
+//     exam: { attempts, correct, sessions, xp }, // histórico + sesiones de examen
 //     activeDays: string[]  // YYYY-MM-DD (lecciones completadas ∪ repasos)
 //   }
 //
@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
 
   // Las lecturas en paralelo (cada una filtrada por RLS al usuario).
   const nowIso = new Date().toISOString();
-  const [progressRes, reviewRes, failedRes, srsRes, examRes] = await Promise.all([
+  const [progressRes, reviewRes, failedRes, srsRes, examRes, examSessionsRes] = await Promise.all([
     supabase
       .from("certdeck_user_lesson_progress")
       .select("lesson_id, status, score_percentage, correct_count, incorrect_count, anki_count, xp, completed_at"),
@@ -71,11 +71,15 @@ Deno.serve(async (req: Request) => {
       .select("question_id, lesson_id"),
     // Repaso espaciado: tarjetas con estado y cuáles están vencidas (due_at<=now).
     supabase.from("certdeck_user_spaced_repetition").select("due_at"),
-    // Histórico de práctica de examen (intentos registrados, Q-06).
+    // Histórico de práctica de examen (intentos a nivel de pregunta, Q-06).
     supabase
       .from("certdeck_user_question_attempts")
       .select("was_correct")
       .eq("question_source", "exam"),
+    // Sesiones de examen (cada una cuenta como "una lección más" y otorga XP).
+    supabase
+      .from("certdeck_user_exam_sessions")
+      .select("xp, created_at"),
   ]);
 
   if (progressRes.error) return json({ error: "query_failed", detail: progressRes.error.message }, 500);
@@ -83,6 +87,7 @@ Deno.serve(async (req: Request) => {
   if (failedRes.error) return json({ error: "query_failed", detail: failedRes.error.message }, 500);
   if (srsRes.error) return json({ error: "query_failed", detail: srsRes.error.message }, 500);
   if (examRes.error) return json({ error: "query_failed", detail: examRes.error.message }, 500);
+  if (examSessionsRes.error) return json({ error: "query_failed", detail: examSessionsRes.error.message }, 500);
 
   const activeDays = new Set<string>();
 
@@ -101,12 +106,13 @@ Deno.serve(async (req: Request) => {
     if (row.status === "completed" && day) activeDays.add(day);
   }
 
-  const review = { xp: 0, totalAnswers: 0, correctAnswers: 0, ankiCards: 0 };
+  const review = { xp: 0, totalAnswers: 0, correctAnswers: 0, ankiCards: 0, sessions: 0 };
   for (const row of reviewRes.data ?? []) {
     review.xp += row.xp ?? 0;
     review.totalAnswers += row.total_answers ?? 0;
     review.correctAnswers += row.correct_answers ?? 0;
     review.ankiCards += row.anki_cards ?? 0;
+    review.sessions += 1;
     const day = dayOf(row.created_at);
     if (day) activeDays.add(day);
   }
@@ -124,11 +130,18 @@ Deno.serve(async (req: Request) => {
     else srs.upcoming += 1;
   }
 
-  // Histórico de examen: intentos y aciertos.
-  const exam = { attempts: 0, correct: 0 };
+  // Histórico de examen: intentos (por pregunta) y aciertos.
+  const exam = { attempts: 0, correct: 0, sessions: 0, xp: 0 };
   for (const row of examRes.data ?? []) {
     exam.attempts += 1;
     if (row.was_correct) exam.correct += 1;
+  }
+  // Sesiones de examen: cuentan como lección y aportan XP; su fecha es día activo.
+  for (const row of examSessionsRes.data ?? []) {
+    exam.sessions += 1;
+    exam.xp += row.xp ?? 0;
+    const day = dayOf(row.created_at);
+    if (day) activeDays.add(day);
   }
 
   return json({

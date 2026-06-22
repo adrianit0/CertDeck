@@ -4,6 +4,7 @@ import { useState } from "react";
 import { User, Moon, Bell, HelpCircle, BookOpen, Check, LogOut } from "lucide-react";
 import type { Course, UserStats } from "@/lib/types";
 import { useTheme } from "@/hooks/useTheme";
+import { levelForXp } from "@/lib/level";
 
 interface PerfilTabProps {
   stats: UserStats;
@@ -43,7 +44,7 @@ export default function PerfilTab({
             </div>
           </div>
           <div className="absolute -bottom-1 -right-1 bg-amber-400 border border-white text-[10px] text-white font-extrabold px-1.5 py-0.5 rounded-full shadow">
-            LVL {Math.floor(stats.xp / 1000) + 1}
+            LVL {levelForXp(stats.xp)}
           </div>
         </div>
 

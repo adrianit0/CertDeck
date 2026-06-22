@@ -629,6 +629,90 @@ caso común (contenido estable) — RNF-17, ADR 0009.
 
 ---
 
+## Iteración — Puntuación de la ronda de corrección (2026-06-22)
+
+> Ajuste de la mecánica de **ronda de corrección**: una pregunta fallada en la
+> pasada principal queda **siempre como fallada**; el reintento de corrección
+> cuenta como **pregunta nueva** dentro de la lección y no rescata la original.
+
+### 1. Problema
+Antes, si fallabas una pregunta y la acertabas en la ronda de corrección, el
+score usaba `Math.max(primaryCorrect, finalCorrect)`: la pregunta pasaba a contar
+como acierto (podía dar 100%), se retiraba de los errores de repaso y se enviaba
+a SM-2 con grade `correct`. No reflejaba que te habías equivocado.
+
+### 2. Comportamiento nuevo (`app/features/shell/LessonPlayer.tsx`)
+- **Score:** `(aciertos_principal + aciertos_corrección) / (total_preguntas + nº_correcciones)`.
+  Cada fallo de la pasada principal añade una pregunta nueva al total (la
+  corrección), por lo que un fallo previo nunca produce 100%.
+- **Errores de repaso:** `failedQuestions`/`passedQuestionIds` se derivan de
+  `primaryCorrect` (no de `finalCorrect`); la pregunta fallada permanece en
+  `certdeck_user_failed_questions` aunque se acierte la corrección.
+- **SM-2:** el `grade` de `cardReviews` se toma de la **pasada principal**
+  (ANKI: autoevaluación principal; resto: acierto principal); la corrección ya no
+  sobrescribe el grade ni la `ankiDifficulty`.
+- **UI:** denominador de "Aciertos" usa el total ampliado; el texto de la intro
+  de corrección pasa a "Ya cuentan como falladas • Este reintento puntúa aparte".
+
+### 3. Verificación (local)
+- `npm run typecheck` ✅ · `npm run lint` ✅ · `npm run test` ✅ 43/43.
+  (La lógica vive en el componente; no hay test unitario dedicado todavía.)
+
+---
+
+## Iteración — Economía de XP y curva de niveles (2026-06-22) — ADR 0010
+
+> Rediseño de la XP (desacoplada del nº de preguntas, máx 100, blindada en
+> servidor) y de la curva de niveles (99 niveles ≈ 1.000.000 XP). Repaso y examen
+> cuentan como "una lección más" y otorgan XP.
+
+### 1. XP por sesión (`app/lib/xp.ts`, pura + tests)
+- `xp = min(100, 50 + floor(score/2))`: base 50 + 1 por cada 2% de acierto, máx 100.
+- **Repetir** una lección ya completada da el **20%** (80% menos).
+- 7 tests (`lib/__tests__/xp.test.ts`).
+
+### 2. Niveles (`app/lib/level.ts`, pura + tests)
+- 99 niveles; `xpForLevel(n) = 1.000.000·((n-1)/98)^2.2` (creciente, arranca barato).
+- `levelForXp`, `levelProgress` para la UI. 11 tests (`lib/__tests__/level.test.ts`).
+- `ProgresosTab` y `PerfilTab` usan la curva real (antes `floor(xp/1000)+1`).
+
+### 3. Blindaje autoritativo (Constitución §4 · RT-03)
+- `certdeck-progress-complete-lesson`: nueva fórmula + **detección de repetición en
+  servidor** (consulta el estado previo de la lección; XP al 20% si ya estaba
+  completada). No confía en banderas del cliente.
+- `certdeck-progress-record-review` y `certdeck-exam-grade`: misma fórmula replicada.
+- El cliente (`LessonPlayer`/`ExamPlayer`) solo muestra un valor **optimista**.
+
+### 4. Repaso y examen = "una lección más"
+- **Nuevo** `supabase/sql/script-009.sql`: tabla `certdeck_user_exam_sessions`
+  (xp/score/total/correct + RLS propia) — una fila por sesión de examen.
+- `certdeck-exam-grade` registra la sesión con XP autoritativa y devuelve `score`/`xp`.
+- `certdeck-progress-get` expone `review.sessions` y `exam.sessions`/`exam.xp` y
+  cuenta sus fechas como días activos.
+- `certdeck-progress-reset` borra también `certdeck_user_exam_sessions`.
+- `progressState.computeUserStats`: `xp` y `lessonsCompleted` agregan lecciones +
+  repasos + exámenes; reductor optimista de repaso incrementa `sessions`.
+
+### 5. Verificación (local)
+- `typecheck` ✅ · `lint` ✅ · `test` ✅ **61/61** · `build` (export) ✅.
+
+### 6. Instrucciones manuales para el propietario (§4)
+> **Proyecto Supabase fijo:** `wtkumfcjqqmgokgrbxxr` ("Prototipos Personales").
+1. **Aplicar SQL**: `supabase/sql/script-009.sql` (tras script-001…008). Idempotente.
+2. **Desplegar/redeployar Edge Functions**:
+   ```bash
+   supabase functions deploy certdeck-progress-complete-lesson
+   supabase functions deploy certdeck-progress-record-review
+   supabase functions deploy certdeck-exam-grade
+   supabase functions deploy certdeck-progress-get
+   supabase functions deploy certdeck-progress-reset
+   ```
+3. **Verificar**: completar una lección (XP = 50 + mitad del % de acierto, máx 100);
+   repetirla (XP ≈ 20%); hacer un repaso y un examen (suman XP y +1 a "lecciones
+   completadas"); el nivel sube despacio al principio y exige más con el rango.
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
@@ -647,3 +731,5 @@ caso común (contenido estable) — RNF-17, ADR 0009.
 | 3.0.0 | 2026-06-16 | **v3 completo**: práctica directa de examen (5ª pestaña) con conjunto exacto (RF-29), `certdeck-exam-questions`/`certdeck-exam-grade` (autoritativa, registra intento sin tocar SRS — Q-06/ADR 0007), `lib/exam.ts` puro + 14 tests; progreso enriquecido (avance por tema, repaso vencido/pendiente, histórico de examen) con agregados `srs`/`exam` en `certdeck-progress-get`; `expansion` reciclada en `certdeck-playable-lesson`; contenido de examen `20260616_04`. |
 | 3.1.0 | 2026-06-16 | **Reporte de errores en tarjetas** (asistencia técnica, ADR 0008 · RF-54…57): `ReportControl` (botón + popup con combo de motivo y detalle) en LessonPlayer y ExamPlayer, `lib/queries/reports.ts`; `script-007.sql` (`certdeck_user_question_reports` + RLS) y Edge Function `certdeck-report-create` (entregados, no aplicados). Además: fix de saltos de línea en pantallas de teoría, truncado del título de curso en la cabecera de lección e intercepción del botón atrás de hardware (confirmar salida de sesión, `@capacitor/app`). |
 | 3.2.0 | 2026-06-16 | **Caché de contenido en cliente** (RNF-17, ADR 0009): catálogo del curso en `localStorage` + token de versión; `AppShell` solo redescarga si cambia. `lib/cache/contentCache.ts`, `getCourseContentVersion`, `script-008.sql` (`certdeck_course_catalog_version`) y Edge Function `certdeck-content-version` (entregados, no aplicados). |
+| 3.2.1 | 2026-06-22 | **Puntuación de la ronda de corrección**: una pregunta fallada en la pasada principal queda siempre como fallada (errores de repaso + grade SM-2 = `fail`); el reintento de corrección cuenta como pregunta nueva y no rescata la original. Score = `(aciertos_principal + aciertos_corrección) / (total + nº_correcciones)`. Solo frontend (`LessonPlayer.tsx`). |
+| 3.3.0 | 2026-06-22 | **Economía de XP y niveles** (ADR 0010): XP por sesión `min(100, 50 + floor(score/2))` (independiente del nº de preguntas; repetir = 20%), blindada en servidor con detección de repetición; curva de 99 niveles ≈ 1.000.000 XP (`lib/xp.ts`, `lib/level.ts` + 18 tests). Repaso y examen cuentan como "una lección más" y dan XP: nueva `script-009.sql` (`certdeck_user_exam_sessions`), `certdeck-exam-grade`/`-progress-get`/`-progress-reset` actualizadas, fórmula nueva en `-complete-lesson`/`-record-review`. |

@@ -20,10 +20,18 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// XP autoritativo (misma fórmula que el cliente para una lección normal):
-// correctas * 50 + bonus de finalización de lección.
-const XP_PER_CORRECT = 50;
-const XP_LESSON_BONUS = 250;
+// XP autoritativo (réplica de app/lib/xp.ts, patrón RT-03): no depende del nº de
+// preguntas. Base 50 + 1 por cada 2% de acierto (máx 100). Repetir una lección ya
+// completada da el 20% (80% menos). El front NO puede inflar esta cantidad.
+const XP_BASE = 50;
+const XP_MAX = 100;
+const XP_REPEAT_FACTOR = 0.2;
+
+function sessionXp(scorePercentage: number, isRepeat: boolean): number {
+  const s = Math.max(0, Math.min(100, Math.round(scorePercentage)));
+  const full = Math.min(XP_MAX, XP_BASE + Math.floor(s / 2));
+  return isRepeat ? Math.round(full * XP_REPEAT_FACTOR) : full;
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -81,10 +89,24 @@ Deno.serve(async (req: Request) => {
   if (userError || !userData.user) return json({ error: "unauthorized" }, 401);
   const userId = userData.user.id;
 
-  // Score y XP recalculados en servidor (no se confía en el cliente).
+  // ¿La lección ya estaba completada? → repetición (XP reducida). Se determina en
+  // SERVIDOR consultando el estado previo; no se confía en una bandera del cliente.
+  const { data: existing } = await supabase
+    .from("certdeck_user_lesson_progress")
+    .select("status, xp")
+    .eq("user_id", userId)
+    .eq("lesson_id", lessonId)
+    .maybeSingle();
+  const isRepeat = existing?.status === "completed";
+
+  // Score y XP recalculados en servidor (no se confía en el cliente). En una
+  // repetición, la XP reducida (20%) se ACUMULA sobre la ya obtenida para que
+  // repetir nunca baje la XP total (ADR 0010).
   const total = correct + incorrect;
   const score = total === 0 ? 100 : Math.round((correct / total) * 100);
-  const xp = correct * XP_PER_CORRECT + XP_LESSON_BONUS;
+  const xp = isRepeat
+    ? Number(existing?.xp ?? 0) + sessionXp(score, true)
+    : sessionXp(score, false);
 
   const { data, error } = await supabase
     .from("certdeck_user_lesson_progress")

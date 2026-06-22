@@ -28,6 +28,16 @@ const corsHeaders = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
+// XP autoritativo (réplica de app/lib/xp.ts, RT-03): base 50 + 1 por cada 2% de
+// acierto (máx 100). Una sesión de examen cuenta como "una lección más".
+const XP_BASE = 50;
+const XP_MAX = 100;
+
+function sessionXp(scorePercentage: number): number {
+  const s = Math.max(0, Math.min(100, Math.round(scorePercentage)));
+  return Math.min(XP_MAX, XP_BASE + Math.floor(s / 2));
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -132,5 +142,21 @@ Deno.serve(async (req: Request) => {
   }
 
   const correctCount = results.filter((r) => r.correct).length;
-  return json({ data: { results, correctCount, total: results.length } });
+  const total = results.length;
+  const score = total === 0 ? 0 : Math.round((correctCount / total) * 100);
+  const xp = sessionXp(score);
+
+  // Registro de la SESIÓN de examen (cuenta como "una lección más" y otorga XP
+  // blindada). Best-effort: no bloquea la corrección si fallara la inserción.
+  if (total > 0) {
+    await supabase.from("certdeck_user_exam_sessions").insert({
+      user_id: userId,
+      xp,
+      score_percentage: score,
+      total_questions: total,
+      correct_count: correctCount,
+    });
+  }
+
+  return json({ data: { results, correctCount, total, score, xp } });
 });

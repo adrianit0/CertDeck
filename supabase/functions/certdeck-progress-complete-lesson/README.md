@@ -47,9 +47,13 @@ No requiere secretos adicionales. Usa el JWT del usuario (header `Authorization`
   }
 }
 ```
-`score_percentage` y `xp` se **recalculan en el servidor** (xp = aciertos·50 + 250);
-no se confía en el cliente. Además da de alta `failed_questions` y de baja
-`passed_question_ids` en `certdeck_user_failed_questions`.
+`score_percentage` y `xp` se **recalculan en el servidor**, no se confía en el
+cliente. La XP **no depende del nº de preguntas**: `xp = min(100, 50 + floor(score/2))`
+(base 50 + 1 por cada 2% de acierto, máx 100). Si la lección **ya estaba
+completada** (repetición, detectada en servidor), se gana solo el **20%** (80%
+menos) y se **acumula** sobre la XP previa de la lección (repetir nunca baja la XP
+total). Además da de alta `failed_questions` y de baja `passed_question_ids` en
+`certdeck_user_failed_questions`.
 
 ## Errores posibles
 | HTTP | `error` | Causa |
