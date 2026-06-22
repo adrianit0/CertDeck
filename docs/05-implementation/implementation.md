@@ -713,6 +713,21 @@ a SM-2 con grade `correct`. No reflejaba que te habías equivocado.
 
 ---
 
+## Iteración — Auditoría de seguridad (2026-06-22)
+
+> Revisión de seguridad pre-push (proyecto completo, 24 commits locales). Solo
+> **documentación**: se registra el estado y los hallazgos para futuros cambios.
+
+- **Nuevo:** [`docs/07-seguridad/auditoria-seguridad.md`](../07-seguridad/auditoria-seguridad.md)
+  — documento vivo con controles verificados y hallazgos **SEC-01…08** (severidad +
+  estado). Resumen: base sólida (RLS, sin secretos, sin service-role en cliente);
+  pendientes de integridad (XP no blindada de verdad, respuestas legibles por el
+  cliente) y un bug en el reset de progreso. Ninguno bloquea el push.
+- **Próximos pasos sugeridos:** SEC-03 (reset, `script-010.sql` con políticas
+  DELETE), luego SEC-01/02 (corrección en servidor), SEC-04 (auth-register).
+
+---
+
 ## Control de versiones del documento
 
 | Versión | Fecha | Cambios |
